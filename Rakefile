@@ -45,17 +45,19 @@ namespace :db do
   task :reset, [:env] => [:nuke, :migrate]
 end
 
-namespace :spec do
-  require 'rspec/core'
-  require 'rspec/core/rake_task'
+if defined?(RSpec::Core::RakeTask)
+  namespace :spec do
+    require 'rspec/core'
+    require 'rspec/core/rake_task'
 
-  task :reset_tests do
-    Rake::Task['db:reset'].invoke("test")
-  end
+    task :reset_tests do
+      Rake::Task['db:reset'].invoke("test")
+    end
 
-  desc "Run all specs"
-  RSpec::Core::RakeTask.new(:all => :reset_tests) do |t|
-    t.pattern = 'spec/**/*_spec.rb'
+    desc "Run all specs"
+    RSpec::Core::RakeTask.new(:all => :reset_tests) do |t|
+      t.pattern = 'spec/**/*_spec.rb'
+    end
   end
 end
 
