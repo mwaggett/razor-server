@@ -1,7 +1,9 @@
 config.yaml
+.bundle
 log/*
 /pkg/
 /.yardoc
 /Gemfile.local*
 /coverage
 /.project
+ext/packaging

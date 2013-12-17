@@ -1,5 +1,18 @@
 require 'rake'
-require 'torquebox-rake-support'
+require 'pathname'
+JRUBY_BIN  = "/usr/local/share/pl-jruby/bin/jruby -S"
+RAKE_ROOT = File.expand_path(File.dirname(__FILE__))
+
+begin
+  require 'torquebox-rake-support'
+rescue LoadError
+  STDERR.puts "Unable to load 'torquebox-rake-support'. Some rake tasks may be unavailable without this library."
+end
+
+begin
+  load File.join(RAKE_ROOT, 'ext', 'packaging.rake')
+rescue LoadError
+end
 
 namespace :bundler do
   task :setup do
@@ -45,17 +58,19 @@ namespace :db do
   task :reset, [:env] => [:nuke, :migrate]
 end
 
-namespace :spec do
-  require 'rspec/core'
-  require 'rspec/core/rake_task'
+if defined?(RSpec::Core::RakeTask)
+  namespace :spec do
+    require 'rspec/core'
+    require 'rspec/core/rake_task'
 
-  task :reset_tests do
-    Rake::Task['db:reset'].invoke("test")
-  end
+    task :reset_tests do
+      Rake::Task['db:reset'].invoke("test")
+    end
 
-  desc "Run all specs"
-  RSpec::Core::RakeTask.new(:all => :reset_tests) do |t|
-    t.pattern = 'spec/**/*_spec.rb'
+    desc "Run all specs"
+    RSpec::Core::RakeTask.new(:all => :reset_tests) do |t|
+      t.pattern = 'spec/**/*_spec.rb'
+    end
   end
 end
 
@@ -74,25 +89,27 @@ task :console do
   IRB.start
 end
 
-desc "Build an archive"
-task :archive do
-  unless ENV["VERSION"]
-    puts "Specify the version for the archive with VERSION="
-    exit 1
-  end
-  topdir = Pathname.new(File::expand_path(File::dirname(__FILE__)))
-  pkgdir = topdir + "pkg"
-  pkgdir.mkpath
-  full_archive = "razor-server-#{ENV["VERSION"]}-full.knob"
-  Dir.mktmpdir("razor-server-archive") do |tmp|
-    puts "Cloning into #{tmp}"
-    system("git clone -q #{topdir} #{tmp}")
-    puts "Create archive #{full_archive}"
-    TorqueBox::DeployUtils.create_archive(
-      name: full_archive,
-      app_dir: tmp,
-      dest_dir: pkgdir.to_s,
-      package_without: %w[development test doc],
-      package_gems: true)
+if defined?(TorqueBox::DeployUtils)
+  desc "Build an archive"
+  task :archive do
+    unless ENV["VERSION"]
+      puts "Specify the version for the archive with VERSION="
+      exit 1
+    end
+    topdir = Pathname.new(File::expand_path(File::dirname(__FILE__)))
+    pkgdir = topdir + "pkg"
+    pkgdir.mkpath
+    full_archive = "razor-server-#{ENV["VERSION"]}-full.knob"
+    Dir.mktmpdir("razor-server-archive") do |tmp|
+      puts "Cloning into #{tmp}"
+      system("git clone -q #{topdir} #{tmp}")
+      puts "Create archive #{full_archive}"
+      TorqueBox::DeployUtils.create_archive(
+        name: full_archive,
+        app_dir: tmp,
+        dest_dir: pkgdir.to_s,
+        package_without: %w[development test doc],
+        package_gems: true)
+    end
   end
 end

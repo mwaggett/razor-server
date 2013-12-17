@@ -1,0 +1,9 @@
+#!/bin/bash
+
+SERVICE_NAME=pe-razor
+
+/usr/bin/getent group  $SERVICE_NAME || /usr/sbin/groupadd \
+  -r $SERVICE_NAME 2> /dev/null ||:
+/usr/bin/getent passwd $SERVICE_NAME || /usr/sbin/useradd \
+  -c "PE Razor" -g $SERVICE_NAME -s /sbin/nologin -r -d /opt/puppet/var/razor \
+  $SERVICE_NAME 2> /dev/null ||:

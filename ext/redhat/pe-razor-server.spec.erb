@@ -1,0 +1,119 @@
+%global p_vendor       pe
+%global _name          razor-server
+%global realversion    <%= @version %>
+%global rpmversion     <%= @rpmversion %>
+%global _service_name  pe-razor
+
+%if 0%{?p_vendor:1}
+    %global name_prefix      %{p_vendor}-
+
+    # Override the _prefix last, so we can get the _real_* locations.
+    %{!?_orig_prefix:     %global _orig_prefix     %{_prefix}}
+    %global               _prefix /opt/puppet
+    %global               _mandir %{_prefix}/share/man
+%endif
+
+%define _java_home  JAVA_HOME=/opt/puppet/lib/jvm/pe-java/jre
+%define _javacmd    JAVACMD=/opt/puppet/bin/java
+%define _jruby      %{_java_home} %{_javacmd} %{_datadir}/torquebox/jruby/bin/jruby -S
+%define _bundle     %{_jruby} bundle
+%define _rake       %{_jruby} rake
+
+Summary:        Razor is an advanced provisioning application
+Name:           %{?name_prefix}%{_name}
+Version:        %{rpmversion}
+Release:        <%= @rpmrelease -%>.pe%{?dist}
+Vendor:         Puppet Labs
+License:        ASL 2.0
+Group:          System Environment/Base
+URL:            http://www.puppetlabs.com/puppet/related-projects/%{name}
+# Note this     URL will only be valid at official tags from Puppet Labs
+Source0:        http://puppetlabs.com/downloads/%{name}/%{name}-%{realversion}.tar.gz
+BuildArch:      noarch
+BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+AutoProv:       0
+
+Requires:       %{?name_prefix}razor-libs
+BuildRequires:  %{?name_prefix}razor-libs
+
+%if 0%{?rhel} > 5 || 0%{?suse_version}
+Requires:       libarchive-devel
+%endif
+
+%description
+Razor is an advanced provisioning application which can deploy both bare-metal
+and virtual systems. It's aimed at solving the problem of how to bring new
+metal into a state where your existing DevOps/configuration management
+workflows can take it over.
+
+Newly added machines in a Razor deployment will PXE-boot from a special Razor
+Microkernel image, then check in, provide Razor with inventory information, and
+wait for further instructions. Razor will consult user-created policy rules to
+choose which preconfigured model to apply to a new node, which will begin to
+follow the model's directions, giving feedback to Razor as it completes various
+steps. Models can include steps for handoff to a DevOps system such as Puppet
+or to any other system capable of controlling the node (such as a vCenter
+server taking possession of ESX systems).
+
+%prep
+%setup -q  -n %{name}-%{realversion}
+
+%build
+
+%install
+rm -rf %{buildroot}
+mkdir -p %{buildroot}%{_datadir}/razor-server
+mkdir -p %{buildroot}%{_prefix}/var/razor
+mkdir -p %{buildroot}%{_initddir}
+mkdir -p %{buildroot}/etc/sysconfig
+mkdir -p %{buildroot}/var/log
+
+# Install the init script and sysconfig file
+cp -pr  ext/redhat/pe-razor-server.init %{buildroot}%{_initddir}/pe-razor-server
+cp -pr  ext/redhat/pe-razor-server.sysconfig %{buildroot}/etc/sysconfig/pe-razor-server
+
+# Clean up packaging artifacts to prevent weird dependencies
+rm -rf ext/debian ext/redhat ext/build_defaults.yaml ext/packaging.rake ext/project_data.yaml
+
+# Bundle me if you want to live
+# Install the production gemset
+%{_bundle} install --shebang /opt/puppet/bin/jruby --local --deployment --path $RPM_BUILD_ROOT%{_datadir}/razor-server/vendor/bundle --without development test doc
+# Finally, we can remove the cached gems since we're not using them for install again
+rm -rf vendor/bundle/jruby/1.9/cache
+# Since we don't want dashboard's BUNDLE_PATH to be set to /tmp/builddir/..., we have to set it manually here
+%{_bundle} config --local --path %{_datadir}/razor-server/vendor/bundle
+
+# Copy the other stuff.
+cp -pr  bin brokers db installers lib log app.rb \
+        config.ru config.yaml.sample Gemfile Gemfile.lock \
+        LICENSE NEWS.md Rakefile README.md torquebox.rb \
+        %{buildroot}%{_datadir}/razor-server
+
+ln -s   %{_datadir}/razor-server/log %{buildroot}/var/log/pe-razor-server
+
+%post
+/sbin/chkconfig --add %{name}
+
+%preun
+if [ "$1" = 0 ] ; then
+    /sbin/service %{name} stop > /dev/null 2>&1
+    /sbin/chkconfig --del %{name}
+fi
+
+%clean
+rm -rf %{buildroot}
+
+%files
+%defattr(-,root,root,-)
+%{_datadir}/razor-server
+%attr(-,%{_service_name},%{_service_name}) %dir %{_prefix}/var/razor
+%attr(-,%{_service_name},%{_service_name}) %{_datadir}/razor-server/config.ru
+%attr(-,%{_service_name},%{_service_name}) %{_datadir}/razor-server/log
+/etc/sysconfig/pe-razor-server
+%{_initddir}/pe-razor-server
+%dir /var/log/pe-razor-server
+%doc doc README.md
+
+%changelog
+* <%= Time.now.strftime("%a %b %d %Y") %> Puppet Labs Release <info@puppetlabs.com> -  <%= @rpmversion %>-<%= @rpmrelease %>.pe
+- Build for <%= @version %>
