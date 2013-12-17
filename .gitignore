@@ -6,3 +6,4 @@ log/*
 /Gemfile.local*
 /coverage
 /.project
+ext/packaging

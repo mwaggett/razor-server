@@ -6,6 +6,13 @@ rescue LoadError
   STDERR.puts "Unable to load 'torquebox-rake-support'. Some rake tasks may be unavailable without this library."
 end
 
+RAKE_ROOT = File.expand_path(File.dirname(__FILE__))
+
+begin
+  load File.join(RAKE_ROOT, 'ext', 'packaging.rake')
+rescue LoadError
+end
+
 namespace :bundler do
   task :setup do
     require 'bundler/setup'
