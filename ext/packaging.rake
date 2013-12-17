@@ -27,6 +27,11 @@ if File.exist?(build_defs_file)
     task :implode do
       rm_rf File.join(RAKE_ROOT, "ext", @packaging_repo)
     end
+
+    desc "Run package:vendor_gems from within jruby"
+    task :jruby_vendor_gems do
+      sh "#{JRUBY_BIN} rake package:vendor_gems"
+    end
   end
 end
 

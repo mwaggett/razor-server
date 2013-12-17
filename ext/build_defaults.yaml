@@ -18,4 +18,4 @@ build_pe: TRUE
 apt_host: 'neptune.delivery.puppetlabs.net'
 apt_repo_url: 'http://freight.puppetlabs.lan'
 apt_repo_path: '/opt/pe_dev'
-#pre_tar_task: 'package:vendor_gems'
+pre_tar_task: 'package:jruby_vendor_gems'
