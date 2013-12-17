@@ -41,6 +41,19 @@ describe "provisioning API" do
     assert_booting("Microkernel")
   end
 
+  describe "/svc/boot complains with a 400" do
+    it "when no parameters are passed" do
+      get "/svc/boot"
+      last_response.status.should == 400
+    end
+
+    it "when none of the parameters are in match_nodes_on" do
+      Razor.config['match_nodes_on'] = ['mac']
+      get "/svc/boot?serial=X1"
+      last_response.status.should == 400
+    end
+  end
+
   describe "booting known nodes" do
     before(:each) do
       @node = Fabricate(:node)
@@ -157,6 +170,30 @@ describe "provisioning API" do
     it "should interpolate node_url" do
       get "/svc/file/#{@node.id}/node_url"
       assert_url_response("/api/nodes/#{@node.id}")
+    end
+
+    describe "repo_url" do
+      ["/foo", "foo"].each do |path|
+        it "should work with repo.iso_url and path #{path}" do
+          policy.repo.iso_url.should_not be_nil
+          get "/svc/file/#{@node.id}/repo_url?path=#{path}"
+          assert_url_response("/svc/repo/#{URI::escape(policy.repo.name)}/foo")
+        end
+      end
+
+      ["http://example.org/repo", "http://example.org/repo/"].each do |url|
+        ["/foo", "foo"].each do |path|
+          it "should work with repo.url #{url} and path #{path}" do
+            policy.repo.iso_url = nil
+            policy.repo.url = url
+            policy.repo.save
+
+            get "/svc/file/#{@node.id}/repo_url?path=#{path}"
+            assert_url_response("/repo/foo")
+            last_response.body.should == "http://example.org/repo/foo"
+          end
+        end
+      end
     end
 
     it "should provide config" do

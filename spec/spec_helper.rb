@@ -1,7 +1,6 @@
 require 'simplecov'
 SimpleCov.start do
-  add_filter "/spec/"
-  add_filter ".erb"
+  %w{/spec/ .erb vendor/}.map {|f| add_filter f }
 end
 
 require 'fabrication'
@@ -49,14 +48,21 @@ class Razor::Config
 
   def reset!
     @facts_blacklist_rx = nil
+    @values['match_nodes_on'] = Razor::Config::HW_INFO_KEYS
   end
 end
 
 FIXTURES_PATH = File::expand_path("fixtures", File::dirname(__FILE__))
 INST_PATH = File::join(FIXTURES_PATH, "installers")
 
+BROKER_FIXTURE_PATH = File.join(FIXTURES_PATH, 'brokers')
+
 def use_installer_fixtures
   Razor.config["installer_path"] = INST_PATH
+end
+
+def use_broker_fixtures
+  Razor.config["broker_path"] = BROKER_FIXTURE_PATH
 end
 
 # Restore the config after each test
@@ -90,6 +96,18 @@ RSpec.configure do |c|
 
   c.after(:each) do
     TorqueBox::Registry.registry.clear
+  end
+end
+
+# @todo lutter 2013-11-15: this works around a bug in
+# TorqueBox::FallbackLogger and should be removed once
+# https://issues.jboss.org/browse/TORQUE-1177 has been fixed
+class TorqueBox::FallbackLogger
+  def flush
+  end
+
+  def write(message)
+    info(message.strip)
   end
 end
 

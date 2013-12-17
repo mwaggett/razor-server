@@ -1,14 +1,48 @@
-# API Overview
+# Razor API Overview and Use
 
-Some boilerplate on how URL's in this doc are only as examples, how we only
-support JSON, ...
+## Compatibility, URL Stability, and Ongoing Support
 
-## Conventions
+The Razor API adopts the REST notion that hypertext defines the API, rather
+than URL templates or clients with special knowledge of the URL structure.
+
+As developers, we promise good compatibility and support for your client if
+you follow the simple rule: use navigation, rather than client-side knowledge
+of the URL structure.
+
+To do that, implement any action by starting at `http://razor:8080/api`,
+rather than anywhere else in the API namespace.  This document then allows you
+to navigate -- much like a web browser can navigate a website -- through the
+various query options available to you.
+
+While this document contains some example URL's, and client output examples
+also include some, you should make no assumptions that the URLs that your
+server uses follow the same structure as the ones in this document.
+
+### Stability Warning
+
+The Razor API is not in a stable state yet. While we try our best to not make
+any incompatible changes, we can't guarantee that we won't.  This is
+supported, in part, by providing clients with well versioned navigation tools
+to discover their desired endpoint, or to cleanly discover that it does not
+exist any longer.
+
+Even after we declare the API stable, clients will have to be able to deal
+with changes to the API: the URL structure, other than the top level
+navigation entry point, is not subject to any assurance that it will stay
+as-is.  Use hypertext navigation, and normal HTTP caching, to ensure this does
+not burn you.
+
+The one hard-coded URL you can use reliably is `/api`, and the document it
+returns is intended to be significantly more stable than any other component
+of the API.  This is because it is the root of all navigation, and if we break
+that no other compatibility assurances matter. ;)
+
+## How to navigate through the document
 
 The type of objects is indicated with a `spec` attribute. The value of the
 attribute is an absolute URL underneath
-http://api.puppetlabs.com/razor/v1. These URL's are currently not backed by
-any content, and serve solely as a unique identifier.
+http://api.puppetlabs.com/razor/v1. These URL's are currently not (yet) backed
+by any content, and serve solely as a unique identifier.
 
 Two attributes are commonly used to identify objects: `id` is a fully
 qualified URL that can be used as a globally unique reference for that
@@ -16,6 +50,42 @@ object, and a `GET` request against that URL will produce a representation
 of the object. The `name` attribute is used for a short (human readable)
 reference to the object, generally only unique amongst objects of the same
 type on the same server.
+
+### `/api` document reference
+
+When you fetch `http://razor:8080/api`, you fetch the top level entry point
+for navigating through our command and query facilities.  The structure of
+this document is a JSON object with the following keys:
+
+ * `commands`: the commands -- mutating operations -- available on this server
+ * `collections`: the collections -- read-only queries -- available on this server
+
+Each of those keys contains a JSON array, with a sequence of JSON objects,
+which have the following keys:
+
+ * `name`: a human-readable label.  No stability promises.
+ * `rel`: a "spec URL" that indicates the type of contained data.  Use this to
+          discover the endpoint that you wish to follow, rather than the `name`.
+ * `id`: the URL to follow to get at this content.
+
+This document has a reasonable stability promise: you should be prepared to
+ignore additional keys at any level, and to treat the value of those keys as
+"unspecified" rather than assuming they will be JSON arrays.
+
+If you follow those simple rules (eg: assume that this documents the minimum
+content returned, and ignore everything else), you can have good confidence
+that you will not need to change your client.
+
+### `/svc` URLs
+
+The `/svc` namespace is an internal namespace, used for communication with the
+iPXE client, the Microkernel, and other internal components of Razor.
+
+This namespace is not enumerated under `/api`, and has no stability promises.
+If you use this namespace, be aware that operations are designed specifically
+for the needs of our internal components rather than as generic query, and
+that we make *NO PROMISES* about stability of these calls, or their content,
+even over patch releases.
 
 ## Commands
 
@@ -31,16 +101,27 @@ when the command has finished.
 
 ### Create new repo
 
-Load an repo into the server
+There are two flavors of repositories: ones where Razor unpacks ISO's for
+you and serves their contents, and ones that are somewhere else, for
+example, on a mirror you maintain. The first form is created by creating a
+repo with the `iso-url` property; the server will download and unpack the
+ISO image into its file system:
 
     {
       "name": "fedora19",
       "iso-url": "file:///tmp/Fedora-19-x86_64-DVD.iso"
     }
 
-Both `name` and `iso-url` must be supplied
+The second form is created by providing a `url` property when you create
+the repository; this form is merely a pointer to a resource somehwere and
+nothing will be downloaded onto the Razor server:
 
-### Delete an repo
+    {
+      "name": "fedora19",
+      "url": "http://mirrors.n-ix.net/fedora/linux/releases/19/Fedora/x86_64/os/"
+    }
+
+### Delete a repo
 
 The `delete-repo` command accepts a single repo name:
 
@@ -106,10 +187,43 @@ command:
 
     {
       "name": "small",
-      "rule": ["=", ["facts", "f1"], "42"]
+      "rule": ["=", ["fact", "processorcount"], "2"]
     }
 
 The `name` of the tag must be unique; the `rule` is a match expression.
+
+### Delete tag
+
+A tag can be deleted by posting its name to the `/spec/delete_tag` command:
+
+    {
+      "name": "small",
+      "force": true
+    }
+
+If the tag is used by a policy, the attempt to delete the tag will fail
+unless the optional parameter `force` is set to `true`; in that case the
+tag will be removed from all policies that use it and then deleted.
+
+### Update tag
+
+The rule for a tag can be changed by posting the following to the
+`/spec/update_tag_rule` command:
+
+    {
+      "name": "small",
+      "rule": ["<=", ["fact", "processorcount"], "2"],
+      "force": true
+    }
+
+This will change the rule of the given tag to the new rule. The tag will be
+reevaluated against all nodes and each node's tag attribute will be updated
+to reflect whether the tag now matches or not, i.e., the tag will be added
+to/removed from each node's tag as appropriate.
+
+If the tag is used by any policies, the update will only be performed if
+the optional parameter `force` is set to `true`. Otherwise, the command
+will return with status code 400.
 
 ### Create policy
 
@@ -135,6 +249,22 @@ exists, the rule must be equal to the rule of the existing tag.
 Hostname is a pattern for the host names of the nodes bound to the policy;
 eventually you'll be able to use facts and other fun stuff there. For now,
 you get to say ${id} and get the node's DB id.
+
+The `max_count` determines how many nodes can be bound at any given point
+to this policy at the most. This can either be set to `nil`, indicating
+that an unbounded number of nodes can be bound to this policy, or a
+positive integer to set an upper bound.
+
+### Enable/disable policy
+
+Policies can be enabled or disabled. Only enabled policies are used when
+matching nodes against policies. There are two commands to toggle a
+policy's `enabled` flag: `enable-policy` and `disable-policy`, which both
+accept the same body, consisting of the name of the policy in question:
+
+    {
+      "name": "a policy"
+    }
 
 ### Delete node
 

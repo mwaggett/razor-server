@@ -11,6 +11,9 @@ class Razor::App < Sinatra::Base
     # hopefully can enable template caching (which does not happen in
     # development mode anyway)
     set :reload_templates, true
+
+    use Razor::Middleware::Logger
+    use Rack::CommonLogger, TorqueBox::Logger.new("razor.web.log")
   end
 
   before do
@@ -55,8 +58,12 @@ class Razor::App < Sinatra::Base
       url escaped.gsub(%r'//+', '/')
     end
 
-    def file_url(template)
-      url "/svc/file/#{@node.id}/#{URI::escape(template)}"
+    def file_url(template, raw = false)
+      if raw
+        url "/svc/file/#{@node.id}/raw/#{URI::escape(template)}"
+      else
+        url "/svc/file/#{@node.id}/#{URI::escape(template)}"
+      end
     end
 
     def log_url(msg, severity=:info)
@@ -72,16 +79,39 @@ class Razor::App < Sinatra::Base
     end
 
     def broker_install_url
-      # FIXME: figure out how we handle serving the broker install script
-      "http://example.org/FILL-IN-BROKER-INSTALL"
+      url "/svc/broker/#{@node.id}/install"
     end
 
     def node_url
       url "/api/nodes/#{@node.id}"
     end
 
+    # Produce a URL to +path+ within the current repo; this is done by
+    # appending +path+ to the repo's URL. Note that that this is simply a
+    # string append, and does not do proper URI concatenation in the sense
+    # of +URI::join+
     def repo_url(path = "")
-      url "/svc/repo/#{@repo.name}#{path}"
+      if @repo.url
+        url = URI::parse(@repo.url)
+        url.path = (url.path + "/" + path).gsub(%r'//+', '/')
+        url.to_s
+      else
+        compose_url "/svc/repo", @repo.name, path
+      end
+    end
+
+    def repo_uri(path = "")
+      URI::parse(repo_url(path))
+    end
+
+    def repo_file(path = "")
+      root = File.expand_path(@repo.name, Razor.config['repo_store_root'])
+      if path.empty?
+        root
+      else
+        logger.info("repo_file(#{path.inspect})")
+        Razor::Data::Repo.find_file_ignoring_case(root, path)
+      end
     end
 
     # @todo lutter 2013-08-21: all the installers need to be adapted to do
@@ -167,6 +197,7 @@ class Razor::App < Sinatra::Base
   # by other means, we'd need to convince facter to send us the same
   # hw_info that iPXE does and identify the node via +Node.lookup+
   post '/svc/checkin/:id' do
+    logger.info("checkin by node #{params[:id]}")
     return 400 if request.content_type != 'application/json'
     begin
       json = JSON::parse(request.body.read)
@@ -178,8 +209,41 @@ class Razor::App < Sinatra::Base
       node = Razor::Data::Node[params["id"]] or return 404
       node.checkin(json).to_json
     rescue Razor::Matcher::RuleEvaluationError => e
-      Razor.logger.error("during checkin of #{node.name}: " + e.message)
+      logger.error("during checkin of #{node.name}: " + e.message)
       { :action => :none }.to_json
+    end
+  end
+
+  # Take a hardware ID bundle, match it to a node, and return the unique
+  # node ID.  This is for the benefit of the Windows installer client, which
+  # can't take any dynamic content from the boot loader, and potentially any
+  # future installer (or other utility) which can identify the hardware
+  # details, but not the node ID, to get that ID.
+  #
+  # GET the URL, with `netN` keys for your network cards, and optionally a
+  # `dhcp_mac`, serial, asset, and uuid DMI data arguments.  These are used
+  # for the same node matching as done in the `/svc/boot` process.
+  #
+  # The return value is a JSON object with one key, `id`, containing the
+  # unique node ID used for further transactions.
+  #
+  # Typically this will then be used to access `/srv/file/$node_id/...`
+  # content from the service.
+  get '/svc/nodeid' do
+    return 400 if params.empty?
+    begin
+      if node = Razor::Data::Node.lookup(params)
+        logger.info("/svc/nodeid: #{params.inspect} mapped to #{node.id}")
+        { :id => node.id }.to_json
+      else
+        logger.info("/svc/nodeid: #{params.inspect} not found")
+        404
+      end
+    rescue Razor::Data::DuplicateNodeError => e
+      logger.info("/svc/nodeid: #{params.inspect} multiple nodes")
+      e.log_to_nodes!
+      logger.error(e.message)
+      return 400
     end
   end
 
@@ -188,7 +252,10 @@ class Razor::App < Sinatra::Base
       @node = Razor::Data::Node.lookup(params)
     rescue Razor::Data::DuplicateNodeError => e
       e.log_to_nodes!
-      Razor.logger.error(e.message)
+      logger.error(e.message)
+      return 400
+    rescue ArgumentError => e
+      logger.error(e.message)
       return 400
     end
 
@@ -216,7 +283,29 @@ class Razor::App < Sinatra::Base
     render_template(template)
   end
 
+  get '/svc/file/:node_id/raw/:filename' do
+    logger.info("#{params[:node_id]}: raw file #{params[:filename]}")
+
+    halt 404 if params[:filename] =~ /\.erb$/i # no raw template access
+
+    @node = Razor::Data::Node[params[:node_id]]
+    halt 404 unless @node
+
+    halt 409 unless @node.policy
+
+    @installer = @node.installer
+    @repo = @node.policy.repo
+
+    @node.log_append(:event => :get_raw_file, :template => params[:filename],
+                     :url => request.url)
+
+    fpath = @installer.find_file(params[:filename]) or halt 404
+    content_type nil
+    send_file fpath, :disposition => nil
+  end
+
   get '/svc/file/:node_id/:template' do
+    logger.info("request from #{params[:node_id]} for #{params[:template]}")
     @node = Razor::Data::Node[params[:node_id]]
     halt 404 unless @node
 
@@ -229,6 +318,17 @@ class Razor::App < Sinatra::Base
                      :url => request.url)
 
     render_template(params[:template])
+  end
+
+  # If we support more than just the `install` script in brokers, this should
+  # expand to take the template identifier like the file service does.
+  get '/svc/broker/:node_id/install' do
+    node = Razor::Data::Node[params[:node_id]]
+    halt 404 unless node
+    halt 409 unless node.policy
+
+    content_type 'text/plain'   # @todo danielp 2013-09-24: ...or?
+    node.policy.broker.install_script_for(node)
   end
 
   get '/svc/log/:node_id' do
@@ -260,12 +360,19 @@ class Razor::App < Sinatra::Base
 
   get '/svc/repo/*' do |path|
     root = File.expand_path(Razor.config['repo_store_root'])
-    fpath = File.join(root, path)
-    fpath.start_with?(root) and File.file?(path) or
-      [404, { :error => "File #{path} not found" }.to_json ]
 
-    content_type nil
-    send_file fpath, :disposition => nil
+    # Unfortunately, we face some complexities.  The ISO9660 format only
+    # supports upper-case filenames, but some installers assume they will be
+    # mapped to lower-case automatically.  If that doesn't happen, we can
+    # hit trouble.  So, to make this more user friendly we look for a
+    # case-insensitive match on the file.
+    fpath = Razor::Data::Repo.find_file_ignoring_case(root, path)
+    if fpath and fpath.start_with?(root) and File.file?(fpath)
+      content_type nil
+      send_file fpath, :disposition => nil
+    else
+      [404, { :error => "File #{path} not found" }.to_json ]
+    end
   end
 
   # The collections we advertise in the API
@@ -285,6 +392,12 @@ class Razor::App < Sinatra::Base
     # knowing the URL, we get this nastiness.  At least we can turn it into
     # something useful by putting documentation about how to use the
     # command or query interface behind it, I guess. --daniel 2013-06-26
+    #
+    # @todo danielp 2013-11-15: we should use `href` or similar rather than
+    # `id` to point to the URL you end up following.  That makes way
+    # more sense.  See https://github.com/puppetlabs/razor-server/issues/96
+    # for discussion and compatibility concerns; we also want to preserve the
+    # `id` key for some time so we don't break older clients.
     {
       "commands" => @@commands.dup.map { |c| c.update("id" => url(c["id"])) },
       "collections" => COLLECTIONS.map do |coll|
@@ -407,6 +520,39 @@ class Razor::App < Sinatra::Base
     Razor::Data::Tag.find_or_create_with_rule(data)
   end
 
+  command :delete_tag do |data|
+    data["name"] or
+      error 400, :error => "Supply a name to indicate which tag to delete"
+    if tag = Razor::Data::Tag[:name => data["name"]]
+      data["force"] or tag.policies.empty? or
+        error 400, :error => "Tag '#{data["name"]} is used by policies and 'force' is false"
+      tag.remove_all_policies
+      tag.remove_all_nodes
+      tag.destroy
+      { :result => "Tag #{data["name"]} deleted" }
+    else
+      { :result => "No change. Tag #{data["name"]} does not exist." }
+    end
+  end
+
+  command :update_tag_rule do |data|
+    data["name"] or
+      error 400, :error => "Supply a name to indicate which tag to delete"
+    data["rule"] or
+      error 400, :error => "Supply a new rule for tag #{data["name"]}"
+    tag = Razor::Data::Tag[:name => data["name"]] or
+      error 404, :error => "Tag '#{data["name"]}' does not exist"
+    data["force"] or tag.policies.empty? or
+      error 400, :error => "Tag '#{data["name"]} is used by policies and 'force' is false"
+    if tag.rule != data["rule"]
+      tag.rule = data["rule"]
+      tag.save
+      { :result => "Tag #{data["name"]} updated" }
+    else
+      { :result => "No change; new rule is the same as the existing rule for #{data["name"]}" }
+    end
+  end
+
   command :create_broker do |data|
     if type = data.delete("broker-type")
       begin
@@ -450,6 +596,25 @@ class Razor::App < Sinatra::Base
     policy.save
 
     policy
+  end
+
+  def toggle_policy_enabled(data, enabled, verb)
+    data['name'] or error 400,
+      :error => "Supply 'name' to indicate which policy to #{verb}"
+    policy = Razor::Data::Policy[:name => data['name']] or error 404,
+      :error => "Policy #{data['name']} does not exist"
+    policy.enabled = enabled
+    policy.save
+
+    { :result => "Policy #{policy.name} #{verb}d" }
+  end
+
+  command :enable_policy do |data|
+    toggle_policy_enabled(data, true, 'enable')
+  end
+
+  command :disable_policy do |data|
+    toggle_policy_enabled(data, false, 'disable')
   end
 
   #

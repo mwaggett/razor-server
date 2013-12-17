@@ -193,42 +193,56 @@ describe Razor::Data::Repo do
     end
   end
 
-  context "iso_url" do
-    [
-      'http://example.com/foobar',
-      'http://example/foobar',
-      'http://example.com/',
-      'http://example.com',
-      'https://foo.example.com/repo.iso',
-      'file:/dev/null',
-      'file:///dev/null'
-    ].each do |url|
-      it "should accept a basic URL: #{url.inspect}" do
-        # save to push validation through the database, too.
-        Repo.new(:name => 'foo', :iso_url => url).save.should be_valid
+
+  [:url, :iso_url].each do |url_name|
+    context url_name.to_s do
+      [
+       'http://example.com/foobar',
+       'http://example/foobar',
+       'http://example.com/',
+       'http://example.com',
+       'https://foo.example.com/repo.iso',
+       'file:/dev/null',
+       'file:///dev/null'
+      ].each do |url|
+        it "should accept a basic URL #{url.inspect}" do
+          # save to push validation through the database, too.
+          Repo.new(:name => 'foo', url_name => url).save.should be_valid
+        end
+      end
+
+      [
+       'ftp://example.com/foo.iso',
+       'file://example.com/dev/null',
+       'file://localhost/dev/null',
+       'http:///vmware.iso',
+       'https:///vmware.iso',
+       "http://example.com/foo\tbar",
+       "http://example.com/foo\nbar",
+       "http://example.com/foo\n",
+       'http://example.com/foo bar'
+      ].each do |url|
+        it "Ruby should reject invalid URL #{url.inspect}" do
+          Repo.new(:name => 'foo', :iso_url => url).should_not be_valid
+        end
+
+        it "PostgreSQL should reject invalid URL #{url.inspect}" do
+          expect {
+            Repo.dataset.insert(:name => 'foo', :iso_url => url)
+          }.to raise_error Sequel::CheckConstraintViolation
+        end
       end
     end
+  end
 
-    [
-      'ftp://example.com/foo.iso',
-      'file://example.com/dev/null',
-      'file://localhost/dev/null',
-      'http:///vmware.iso',
-      'https:///vmware.iso',
-      "http://example.com/foo\tbar",
-      "http://example.com/foo\nbar",
-      "http://example.com/foo\n",
-      'http://example.com/foo bar'
-    ].each do |url|
-      it "Ruby should reject invalid URL: #{url.inspect}" do
-        Repo.new(:name => 'foo', :iso_url => url).should_not be_valid
-      end
+  context "url and iso_url" do
+    it "should reject setting both" do
+      Repo.new(:name => 'foo', :url => 'http://example.org/',
+               :iso_url => 'http://example.com').should_not be_valid
+    end
 
-      it "PostgreSQL should reject invalid URL: #{url.inspect}" do
-        expect {
-          Repo.dataset.insert(:name => 'foo', :iso_url => url)
-        }.to raise_error Sequel::CheckConstraintViolation
-      end
+    it "should require setting one of them" do
+      Repo.new(:name => 'foo').should_not be_valid
     end
   end
 
@@ -389,21 +403,6 @@ describe Razor::Data::Repo do
   end
 
   context "repo_store_root" do
-    it "should raise if no repo store root is configured" do
-      Razor.config.stub(:[]).with('repo_store_root').and_return(nil)
-
-      expect {
-        Repo.new(:name => "foo", :iso_url => 'file:///').repo_store_root
-      }.to raise_error RuntimeError, /repo_store_root/
-    end
-
-    it "should raise if the path is not absolute" do
-      Razor.config.stub(:[]).with('repo_store_root').and_return('hoobly-goobly')
-      expect {
-        Repo.new(:name => "foo", :iso_url => 'file:///').repo_store_root
-      }.to raise_error RuntimeError, /repo_store_root/
-    end
-
     it "should return a Pathname if the path is valid" do
       path = '/no/such/repo-store'
       Razor.config.stub(:[]).with('repo_store_root').and_return(path)
@@ -437,14 +436,16 @@ describe Razor::Data::Repo do
     end
 
     it "should unpack the repo into the filesystem_safe_name under root" do
-      Dir.mktmpdir do |root|
-        root = Pathname(root)
-        Razor.config['repo_store_root'] = root
-        repo.unpack_repo(tiny_iso)
+      pending("libarchive ISO support on OSX", :if => ::FFI::Platform.mac?) do
+        Dir.mktmpdir do |root|
+          root = Pathname(root)
+          Razor.config['repo_store_root'] = root
+          repo.unpack_repo(tiny_iso)
 
-        (root + repo.filesystem_safe_name).should exist
-        (root + repo.filesystem_safe_name + 'content.txt').should exist
-        (root + repo.filesystem_safe_name + 'file-with-filename-that-is-longer-than-64-characters-which-some-unpackers-get-wrong.txt').should exist
+          (root + repo.filesystem_safe_name).should exist
+          (root + repo.filesystem_safe_name + 'content.txt').should exist
+          (root + repo.filesystem_safe_name + 'file-with-filename-that-is-longer-than-64-characters-which-some-unpackers-get-wrong.txt').should exist
+        end
       end
     end
 

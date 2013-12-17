@@ -21,7 +21,7 @@ module Razor::Data
     # The only columns that may be set through "mass assignment", which is
     # typically through the constructor.  Only enforced at the Ruby layer, but
     # since we direct everything through the model that is acceptable.
-    set_allowed_columns :name, :iso_url
+    set_allowed_columns :name, :iso_url, :url
 
     # When a new instance is saved, we need to make the repo accessible as a
     # local file.
@@ -41,6 +41,14 @@ module Razor::Data
       self.tmpdir and FileUtils.remove_entry_secure(self.tmpdir, true)
     end
 
+    def validate
+      super
+      if url and iso_url
+        errors.add(:urls, "either url or iso_url must be given")
+      elsif url.nil? and iso_url.nil?
+        errors.add(:urls, "only one of url and iso_url can be used")
+      end
+    end
 
     # Make the repo accessible on the local system, and then generate
     # a notification.  In the event the repo is remote, it will be downloaded
@@ -124,14 +132,7 @@ module Razor::Data
     # Return the path on disk for our repo store root; each repo is unpacked
     # into a directory immediately below this root.
     def repo_store_root
-      # @todo danielp 2013-07-24: this should be lifted into some more global
-      # validation of our configuration file.  When we figure that out, we
-      # should pull it up to there.
-      root = Razor.config['repo_store_root'] or
-        raise "`repo_store_root` is not set in the configuration file"
-      root = Pathname(root)
-      root.absolute? or raise "`repo_store_root` was not an absolute path"
-      root
+      Pathname(Razor.config['repo_store_root'])
     end
 
     # Return the name of the repo, made file-system safe by URL-encoding it
@@ -160,6 +161,53 @@ module Razor::Data
         self.tmpdir = nil
         self.save
       end
+    end
+
+
+    def self.find_file_ignoring_case(root, path)
+      TorqueBox::Logger.new.info("find_file_ignoring_case(#{root}/#{path})")
+
+      # Do we have a file with matching case?  If so, return it.  This should
+      # help address the situation if we ever have a case-sensitive installer
+      # that expects different files with the same name but not the same case,
+      # because we will default to the "right" one first.  Hopefully.
+      clean = File.join(root, path)
+      if File.exist? clean
+        clean
+      else
+        # We split the path into segments and dispatch to our recursive worker,
+        # which will return the first completely matching file, or nil.  This is
+        # just a nicer way of invoking the recursive function...
+        path = path.sub(%r{^/+}, '').split(%r{/+})
+        _find_file_ignoring_case_recursively(root.to_s, *path)
+      end
+    end
+
+    def self._find_file_ignoring_case_recursively(root, segment, *rest)
+      # Find matching files in the root, if any, and retain the
+      # case-insensitively matching entries from it.
+      entries = Dir.entries(root).select {|x| x.downcase == segment.downcase } rescue nil
+      return nil unless entries and not entries.empty?
+
+      # Are we looking for the actual file, or another directory?
+      if rest.empty?
+        entries.each do |try|
+          file = File.join(root, try)
+          if File.exist?(file)
+            TorqueBox::Logger.new.info("matched case-insensitive file #{file}")
+            return file
+          end
+        end
+      else
+        # We are looking for something deeper, so map through these
+        # possibilities and see if we have a match down there.
+        entries.each do |try|
+          found = _find_file_ignoring_case_recursively(File.join(root, try), *rest)
+          return found if found
+        end
+      end
+
+      return nil
     end
   end
 end
