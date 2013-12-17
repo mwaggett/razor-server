@@ -1,0 +1,16 @@
+Source: pe-razor-server
+Section: java
+Priority: optional
+Maintainer: Puppet Labs <info@puppetlabs.com>
+Build-Depends: cdbs, debhelper (>> 7), pe-razor-libs
+Standards-Version: 3.9.1
+Homepage: http://www.puppetlabs.com
+
+Package: pe-razor-server
+Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depends}, pe-razor-libs, libarchive-dev
+Description: Razor is an advanced provisioning application
+ Razor is an advanced provisioning application which can deploy both bare-metal
+ and virtual systems. It's aimed at solving the problem of how to bring new
+ metal into a state where your existing DevOps/configuration management
+ workflows can take it over.

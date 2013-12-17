@@ -1,0 +1,8 @@
+RAZOR_CONFIG=/etc/puppetlabs/razor/config.yaml
+export RAZOR_CONFIG
+
+JAVA=/opt/puppet/bin/java
+export JAVA
+
+RAZOR_PORT=8080
+export RAZOR_PORT

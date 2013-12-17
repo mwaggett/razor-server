@@ -1,0 +1,4 @@
+#!/bin/bash
+
+/bin/chown pe-razor:pe-razor /opt/puppet/var/razor 2> /dev/null ||:
+/bin/chown pe-razor:pe-razor /opt/puppet/share/razor-server/config.ru 2>/dev/null ||:
