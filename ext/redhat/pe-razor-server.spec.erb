@@ -81,10 +81,10 @@ rm -rf ext/debian ext/redhat ext/build_defaults.yaml ext/packaging.rake ext/proj
 # Finally, we can remove the cached gems since we're not using them for install again
 rm -rf vendor/bundle/jruby/1.9/cache
 # Since we don't want dashboard's BUNDLE_PATH to be set to /tmp/builddir/..., we have to set it manually here
-%{_bundle} config --local --path %{_datadir}/razor-server/vendor/bundle
+%{_bundle} config --local PATH %{_datadir}/razor-server/vendor/bundle
 
 # Copy the other stuff.
-cp -pr  bin brokers db installers lib app.rb \
+cp -pr  .bundle bin brokers db installers lib app.rb \
         config.ru config.yaml.sample Gemfile Gemfile.lock \
         LICENSE NEWS.md Rakefile README.md torquebox.rb \
         %{buildroot}%{_datadir}/razor-server
