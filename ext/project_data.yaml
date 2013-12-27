@@ -27,7 +27,6 @@ files:
   - ext
   - installers
   - lib
-  - log
   - app.rb
   - config.ru
   - config.yaml.sample

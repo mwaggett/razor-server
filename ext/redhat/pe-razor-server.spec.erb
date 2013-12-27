@@ -66,7 +66,7 @@ mkdir -p %{buildroot}%{_datadir}/razor-server
 mkdir -p %{buildroot}%{_prefix}/var/razor
 mkdir -p %{buildroot}%{_initddir}
 mkdir -p %{buildroot}/etc/sysconfig
-mkdir -p %{buildroot}/var/log
+mkdir -p %{buildroot}/var/log/%{name}
 
 # Install the init script and sysconfig file
 cp -pr  ext/redhat/pe-razor-server.init %{buildroot}%{_initddir}/pe-razor-server
@@ -84,12 +84,10 @@ rm -rf vendor/bundle/jruby/1.9/cache
 %{_bundle} config --local --path %{_datadir}/razor-server/vendor/bundle
 
 # Copy the other stuff.
-cp -pr  bin brokers db installers lib log app.rb \
+cp -pr  bin brokers db installers lib app.rb \
         config.ru config.yaml.sample Gemfile Gemfile.lock \
         LICENSE NEWS.md Rakefile README.md torquebox.rb \
         %{buildroot}%{_datadir}/razor-server
-
-ln -s   %{_datadir}/razor-server/log %{buildroot}/var/log/pe-razor-server
 
 %post
 /sbin/chkconfig --add %{name}
@@ -107,11 +105,10 @@ rm -rf %{buildroot}
 %defattr(-,root,root,-)
 %{_datadir}/razor-server
 %attr(-,%{_service_name},%{_service_name}) %dir %{_prefix}/var/razor
+%attr(-,%{_service_name},%{_service_name}) %dir /var/log/%{name}
 %attr(-,%{_service_name},%{_service_name}) %{_datadir}/razor-server/config.ru
-%attr(-,%{_service_name},%{_service_name}) %{_datadir}/razor-server/log
 /etc/sysconfig/%{name}
 %{_initddir}/%{name}
-%dir /var/log/%{name}
 %doc doc README.md
 
 %changelog
