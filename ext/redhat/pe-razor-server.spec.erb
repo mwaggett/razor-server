@@ -89,6 +89,9 @@ cp -pr  bin brokers db installers lib app.rb \
         LICENSE NEWS.md Rakefile README.md torquebox.rb \
         %{buildroot}%{_datadir}/razor-server
 
+# Munge the shebang on razor-admin to point to the correct jruby instance for PE
+sed -i 's,#! /usr/bin/env jruby,#!/opt/puppet/bin/jruby,g' %{buildroot}%{_datadir}/razor-server/bin/razor-admin
+
 %post
 /sbin/chkconfig --add %{name}
 
