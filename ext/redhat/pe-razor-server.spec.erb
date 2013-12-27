@@ -109,9 +109,9 @@ rm -rf %{buildroot}
 %attr(-,%{_service_name},%{_service_name}) %dir %{_prefix}/var/razor
 %attr(-,%{_service_name},%{_service_name}) %{_datadir}/razor-server/config.ru
 %attr(-,%{_service_name},%{_service_name}) %{_datadir}/razor-server/log
-/etc/sysconfig/pe-razor-server
-%{_initddir}/pe-razor-server
-%dir /var/log/pe-razor-server
+/etc/sysconfig/%{name}
+%{_initddir}/%{name}
+%dir /var/log/%{name}
 %doc doc README.md
 
 %changelog
