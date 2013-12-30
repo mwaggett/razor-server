@@ -63,8 +63,10 @@ server taking possession of ESX systems).
 %install
 rm -rf %{buildroot}
 mkdir -p %{buildroot}%{_datadir}/razor-server
+mkdir -p %{buildroot}%{_datadir}/razor-server/bin
 mkdir -p %{buildroot}%{_prefix}/var/razor
 mkdir -p %{buildroot}%{_initddir}
+mkdir -p %{buildroot}%{_bindir}
 mkdir -p %{buildroot}/etc/sysconfig
 mkdir -p %{buildroot}/var/log/%{name}
 
@@ -84,10 +86,13 @@ rm -rf vendor/bundle/jruby/1.9/cache
 %{_bundle} config --local PATH %{_datadir}/razor-server/vendor/bundle
 
 # Copy the other stuff.
-cp -pr  .bundle bin brokers db installers lib app.rb \
+cp -pr  .bundle brokers db installers lib app.rb \
         config.ru config.yaml.sample Gemfile Gemfile.lock \
         LICENSE NEWS.md Rakefile README.md torquebox.rb \
         %{buildroot}%{_datadir}/razor-server
+
+cp -p   bin/razor-admin %{buildroot}%{_datadir}/razor-server/bin
+cp -p   bin/razor-admin-wrapper %{buildroot}%{_bindir}/razor-admin
 
 # Munge the shebang on razor-admin to point to the correct jruby instance for PE
 sed -i 's,#! /usr/bin/env jruby,#!/opt/puppet/bin/jruby,g' %{buildroot}%{_datadir}/razor-server/bin/razor-admin
@@ -107,6 +112,7 @@ rm -rf %{buildroot}
 %files
 %defattr(-,root,root,-)
 %{_datadir}/razor-server
+%{_bindir}/razor-admin
 %attr(-,%{_service_name},%{_service_name}) %dir %{_prefix}/var/razor
 %attr(-,%{_service_name},%{_service_name}) %dir /var/log/%{name}
 %attr(-,%{_service_name},%{_service_name}) %{_datadir}/razor-server/config.ru
