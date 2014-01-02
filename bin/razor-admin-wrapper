@@ -12,6 +12,12 @@ export TORQUEBOX_HOME="${torquebox}"
 export JBOSS_HOME="${torquebox}/jboss"
 export JRUBY_HOME="${torquebox}/jruby"
 
+# Load the sysconfig file for pe-razor-server,
+# to get the RAZOR_CONFIG setting.
+if [ -e /etc/sysconfig/pe-razor-server ]; then
+  . /etc/sysconfig/pe-razor-server
+fi
+
 # Figure out what we were asked to execute.
 exe="$(basename $0)"
 
