@@ -9,9 +9,14 @@
 
     # Override the _prefix last, so we can get the _real_* locations.
     %{!?_orig_prefix:     %global _orig_prefix     %{_prefix}}
+    %{!?_real_initrddir:  %global _real_initrddir  %{_initrddir}}
+    %{!?_real_sysconfdir: %global _real_sysconfdir %{_sysconfdir}}
+    %global               _initrddir  %{_real_initrddir}
+    %global               _sysconfdir %{_real_sysconfdir}/puppetlabs
     %global               _prefix     /opt/puppet
-    %global               _sysconfdir /etc/puppetlabs
-    %global               _mandir     %{_prefix}/share/man
+    %global               _datadir    %{_prefix}/share
+    %global               _mandir     %{_datadir}/man
+    %global               _bindir     %{_prefix}/bin
 %endif
 
 %define _java_home  JAVA_HOME=/opt/puppet/lib/jvm/pe-java/jre
@@ -25,7 +30,7 @@ Name:           %{?name_prefix}%{_name}
 Version:        %{rpmversion}
 Release:        <%= @rpmrelease -%>.pe%{?dist}
 Vendor:         Puppet Labs
-License:        ASL 2.0
+License:        PL Commercial
 Group:          System Environment/Base
 URL:            http://www.puppetlabs.com/puppet/related-projects/%{name}
 # Note this     URL will only be valid at official tags from Puppet Labs
@@ -66,14 +71,14 @@ rm -rf %{buildroot}
 mkdir -p %{buildroot}%{_datadir}/razor-server
 mkdir -p %{buildroot}%{_datadir}/razor-server/bin
 mkdir -p %{buildroot}%{_prefix}/var/razor
-mkdir -p %{buildroot}%{_initddir}
+mkdir -p %{buildroot}%{_initrddir}
 mkdir -p %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_sysconfdir}/razor
 mkdir -p %{buildroot}/etc/sysconfig
 mkdir -p %{buildroot}/var/log/%{name}
 
 # Install the init script and sysconfig file
-cp -pr  ext/redhat/pe-razor-server.init %{buildroot}%{_initddir}/pe-razor-server
+cp -pr  ext/redhat/pe-razor-server.init %{buildroot}%{_initrddir}/pe-razor-server
 cp -pr  ext/redhat/pe-razor-server.sysconfig %{buildroot}/etc/sysconfig/pe-razor-server
 
 # Clean up packaging artifacts to prevent weird dependencies
@@ -99,13 +104,37 @@ cp -p   config.yaml.sample %{buildroot}%{_sysconfdir}/razor
 # Munge the shebang on razor-admin to point to the correct jruby instance for PE
 sed -i 's,#! /usr/bin/env jruby,#!/opt/puppet/bin/jruby,g' %{buildroot}%{_datadir}/razor-server/bin/razor-admin
 
+%pre
+if [ $1 -gt 1 ]; then
+  (
+    cd %{_datadir}/razor-server;
+    /opt/puppet/sbin/torquebox undeploy > /dev/null 2>&1 ||:
+  )
+fi
+
 %post
 /sbin/chkconfig --add %{name}
 
+if [ $1 -gt 1 ]; then
+  if [ -f /etc/puppetlabs/razor/config.yaml ]; then
+    /opt/puppet/bin/razor-admin migrate-database > /dev/null 2>&1 ||:
+  fi
+fi
+  (
+    cd %{_datadir}/razor-server;
+    /opt/puppet/sbin/torquebox deploy > /dev/null 2>&1 ||:
+  )
+
+
 %preun
-if [ "$1" = 0 ] ; then
-    /sbin/service %{name} stop > /dev/null 2>&1
+if [ $1 -eq 0 ] ; then
+    /sbin/service %{name} stop > /dev/null 2>&1 ||:
     /sbin/chkconfig --del %{name}
+
+  (
+    cd %{_datadir}/razor-server;
+    /opt/puppet/sbin/torquebox undeploy > /dev/null 2>&1 ||:
+  )
 fi
 
 %clean
@@ -121,7 +150,7 @@ rm -rf %{buildroot}
 %attr(-,%{_service_name},%{_service_name}) %dir /var/log/%{name}
 %attr(-,%{_service_name},%{_service_name}) %{_datadir}/razor-server/config.ru
 /etc/sysconfig/%{name}
-%{_initddir}/%{name}
+%{_initrddir}/%{name}
 %doc doc README.md
 
 %changelog
