@@ -25,16 +25,17 @@ files:
   - db
   - doc
   - ext
-  - installers
   - lib
   - app.rb
   - config.ru
   - config.yaml.sample
   - Gemfile
   - Gemfile.lock
+  - jars
   - LICENSE
   - NEWS.md
   - Rakefile
+  - recipes
   - README.md
   - torquebox.rb
   - vendor
