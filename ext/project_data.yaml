@@ -25,7 +25,6 @@ files:
   - db
   - doc
   - ext
-  - installers
   - lib
   - app.rb
   - config.ru
@@ -35,6 +34,7 @@ files:
   - LICENSE
   - NEWS.md
   - Rakefile
+  - recipes
   - README.md
   - torquebox.rb
   - vendor
