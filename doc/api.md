@@ -129,16 +129,16 @@ The `delete-repo` command accepts a single repo name:
       "name": "fedora16"
     }
 
-### Create installer
+### Create recipe
 
-Razor supports both installers stored in the filesystem and installers
+Razor supports both recipes stored in the filesystem and recipes
 stored in the database; for development, it is highly recommended that you
-store your installers in the filesystem. Details about that can be found
-[on the Wiki](https://github.com/puppetlabs/razor-server/wiki/Writing-installers)
+store your recipes in the filesystem. Details about that can be found
+[on the Wiki](https://github.com/puppetlabs/razor-server/wiki/Writing-recipes)
 
-For production setups, it is usually better to store your installers in the
-database. To create an installer, clients post the following to the
-`/spec/create_installer` URL:
+For production setups, it is usually better to store your recipes in the
+database. To create an recipe, clients post the following to the
+`/spec/create_recipe` URL:
 
     {
       "name": "redhat6",
@@ -157,7 +157,7 @@ database. To create an installer, clients post the following to the
 
 The possible properties in the request are:
 
-name       | The name of the installer; must be unique
+name       | The name of the recipe; must be unique
 os         | The name of the OS; mandatory
 os_version | The version of the operating system
 description| Human-readable description
@@ -170,7 +170,10 @@ To create a broker, clients post the following to the `create-broker` URL:
 
     {
       "name": "puppet",
-      "configuration": { "server": "puppet.example.org", "version": "3.0.0" },
+      "configuration": {
+         "server": "puppet.example.org",
+         "environment": "production"
+      },
       "broker-type": "puppet"
     }
 
@@ -230,7 +233,7 @@ will return with status code 400.
     {
       "name": "a policy",
       "repo": { "name": "some_repo" },
-      "installer": { "name": "redhat6" },
+      "recipe": { "name": "redhat6" },
       "broker": { "name": "puppet" },
       "hostname": "host${id}.example.com",
       "root_password": "secret",
@@ -242,7 +245,7 @@ will return with status code 400.
 
 Policies are matched in the order of ascending line numbers.
 
-Tags, brokers, installers and repos are referenced by their name. Tags can
+Tags, brokers, recipes and repos are referenced by their name. Tags can
 also be created by providing a rule; if a tag with that name already
 exists, the rule must be equal to the rule of the existing tag.
 
@@ -266,6 +269,48 @@ accept the same body, consisting of the name of the policy in question:
       "name": "a policy"
     }
 
+### Modify the max-count for a policy
+
+The command `modify-policy-max-count` makes it possible to manipulate how
+many nodes can be bound to a specific policy at the most. The body of the
+request should be of the form:
+
+    {
+      "name": "a policy"
+      "max-count": new-count
+    }
+
+The `new-count` can be an integer, which must be larger than the number of
+nodes that are currently bound to the policy, or `null` to make the policy
+unbounded
+
+### Add/remove tags to/from Policy
+
+You can add or remove tags from policies with `add-policy-tag` and
+ `remove-policy-tag` respectively.  In both cases supply the name of a
+policy and the name of the tag.  When adding a tag, you can specify an
+existing tag, or create a new one by supplying a name and rule for the
+new tag:
+
+    {
+      "name": "a-policy-name",
+      "tag" : "a-tag-name",
+      "rule": "new-match-expression" #Only for `add-policy-tag`
+    }
+
+### Delete policy
+
+Policies can be deleted with the `delete-policy` command.  It accepts the
+name of a single policy:
+
+    {
+      'name': 'my-policy'
+    }
+
+Note that this does not affect the `installed` status of a node, and
+therefore won't, by itself, cause a node to be bound to another policy upon
+reboot.
+
 ### Delete node
 
 A single node can be removed from the database with the `delete-node`
@@ -278,16 +323,77 @@ command. It accepts the name of a single node:
 Of course, if that node boots again at some point, it will be automatically
 recreated.
 
-### Unbind node
+### Reinstall node
 
-Unbinding a node removes its association with a policy; once unbound, the
-node will boot back into the Microkernel and go through discovery, tag
-matching and possibly be bound to another policy. Specify which node to
-unbind by sending the node's name in the body of the request
+This command removes a node's association with any policy and clears its
+`installed` flag; once the node reboots, it will boot back into the
+Microkernel and go through discovery, tag matching and possibly be bound to
+another policy. This command does not change its metadata or facts. Specify
+which node to unbind by sending the node's name in the body of the request
 
     {
       'name': 'node17'
     }
+
+### Set node IPMI credentials
+
+Razor can store IPMI credentials on a per-node basis.  These are the hostname
+(or IP address), the username, and the password to use when contacting the
+BMC/LOM/IPMI lan or lanplus service to check or update power state and other
+node data.
+
+This is an atomic operation: all three data items are set or reset in a single
+operation.  Partial updates must be handled client-side.  This eliminates
+conflicting update and partial update combination surprises for users.
+
+The structure of a request is:
+
+    {
+      'name': 'node17',
+      'ipmi-hostname': 'bmc17.example.com',
+      'ipmi-username': null,
+      'ipmi-password': 'sekretskwirrl'
+    }
+
+The various IPMI fields can be null (representing no value, or the NULL
+username/password as defined by IPMI), and if omitted are implicitly set to
+the NULL value.
+
+You *must* provide an IPMI hostname if you provide either a username or
+password, since we only support remote, not local, communication with the
+IPMI target.
+
+### Modify Node Metadata
+
+Node metadata is similar to a nodes facts except metadata is what the
+administrators tell Razor about the node rather than what the node tells
+Razor about itself.
+
+Metadata is a collection of key => value pairs (like facts).  Use the
+ `modify-node-metadata` command to add/update, remove or clear a node's
+metadata.  The request should look like:
+
+    {
+        'node': 'node1',
+        'update': {                         # Add or update these keys
+            'key1': 'value1',
+            'key2': 'value2',
+            ...
+        }
+        'remove': [ 'key3', 'key4', ... ],  # Remove these keys
+    }
+
+or
+
+    {
+        'node': 'node1',
+        'clear': true                       # Clear all metadata
+    }
+
+As above, multiple update and/or removes can be done in the one command,
+however, clear can only be done on its own (it doesnt make sense to
+update some details and then clear everything).  An error will also be
+returned if an attempt is made to update and remove the same key.
 
 ## Collections
 

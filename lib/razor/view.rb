@@ -50,7 +50,7 @@ module Razor
 
       view_object_hash(policy).merge({
         :repo => view_object_reference(policy.repo),
-        :installer => view_object_reference(policy.installer),
+        :recipe => view_object_reference(policy.recipe),
         :broker => view_object_reference(policy.broker),
         :enabled => !!policy.enabled,
         :max_count => policy.max_count != 0 ? policy.max_count : nil,
@@ -60,6 +60,9 @@ module Razor
         },
         :rule_number => policy.rule_number,
         :tags => policy.tags.map {|t| view_object_reference(t) }.compact,
+        :nodes => { :id => view_object_url(policy) + "/nodes",
+                    :count => policy.nodes.count,
+                    :name => "nodes" }
       })
     end
 
@@ -67,7 +70,13 @@ module Razor
       return nil unless tag
 
       view_object_hash(tag).merge({
-        :rule => tag.rule
+        :rule => tag.rule,
+        :nodes => { :id => view_object_url(tag) + "/nodes",
+                    :count => tag.nodes.count,
+                    :name => "nodes" },
+        :policies => { :id => view_object_url(tag) + "/policies",
+                       :count => tag.policies.count,
+                       :name => "policies" }
       })
     end
 
@@ -88,31 +97,42 @@ module Razor
         :"broker-type"   => broker.broker_type)
     end
 
-    def installer_hash(installer)
-      return nil unless installer
+    def recipe_hash(recipe)
+      return nil unless recipe
 
-      if installer.base
-        base = { :base => view_object_reference(installer.base) }
+      if recipe.base
+        base = { :base => view_object_reference(recipe.base) }
       else
         base = {}
       end
 
       # FIXME: also return templates, requires some work for file-based
-      # installers
-      view_object_hash(installer).merge(base).merge({
+      # recipes
+      view_object_hash(recipe).merge(base).merge({
         :os => {
-          :name => installer.os,
-          :version => installer.os_version }.delete_if {|k,v| v.nil? },
-        :description => installer.description,
-        :boot_seq => installer.boot_seq
+          :name => recipe.os,
+          :version => recipe.os_version }.delete_if {|k,v| v.nil? },
+        :description => recipe.description,
+        :boot_seq => recipe.boot_seq
       }).delete_if {|k,v| v.nil? }
+    end
+
+    def ts(date)
+      date ? date.xmlschema : nil
     end
 
     def node_hash(node)
       return nil unless node
-      # @todo lutter 2013-09-09: if there is a policy, use boot_count to
-      # provide a useful status about progress
-      last_checkin_s = node.last_checkin.xmlschema if node.last_checkin
+
+      boot_stage = node.policy ? node.recipe.boot_template(node) : nil
+      if node.last_known_power_state.nil?
+        power_state = nil
+      elsif node.last_known_power_state
+        power_state = 'on'
+      else
+        power_state = 'off'
+      end
+
       view_object_hash(node).merge(
         :hw_info       => node.hw_hash,
         :dhcp_mac      => node.dhcp_mac,
@@ -121,11 +141,29 @@ module Razor
                             :name => "log" },
         :tags          => node.tags.map { |t| view_object_reference(t) },
         :facts         => node.facts,
+        :metadata      => node.metadata,
+        :state         => {
+          :installed    => node.installed,
+          :installed_at => ts(node.installed_at),
+          :stage        => boot_stage,
+          :power        => power_state
+        }.delete_if { |k,v| v.nil? },
         :hostname      => node.hostname,
         :root_password => node.root_password,
-        :ip_address    => node.ip_address,
-        :last_checkin  => last_checkin_s
-      ).delete_if {|k,v| v.nil? }
+        :last_checkin  => ts(node.last_checkin)
+      ).delete_if {|k,v| v.nil? or ( v.is_a? Hash and v.empty? ) }
+    end
+
+    def collection_view(cursor, name)
+      perm = "query:#{name}"
+      cursor = cursor.all if cursor.respond_to?(:all)
+      items = cursor.
+        map {|t| view_object_reference(t)}.
+        select {|o| check_permissions!("#{perm}:#{o[:name]}") rescue nil }
+      {
+        "spec" => spec_url("collections", name),
+        "items" => items
+      }.to_json
     end
   end
 end

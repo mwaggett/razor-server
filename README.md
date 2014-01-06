@@ -5,27 +5,27 @@ bare-metal and virtual systems. It's aimed at solving the problem of how to
 bring new metal into a state where your existing DevOps/configuration
 management workflows can take it over.
 
-Newly added machines in a Razor deployment will PXE-boot from a special
-Razor Microkernel image, then check in, provide Razor with inventory
-information, and wait for further instructions. Razor will consult
-user-created policy rules to choose which preconfigured model to apply to a
-new node, which will begin to follow the model's directions, giving
-feedback to Razor as it completes various steps. Models can include steps
-for handoff to a DevOps system such as
-[Puppet](https://github.com/puppetlabs/puppet) or to any other system
-capable of controlling the node (such as a vCenter server taking possession
-of ESX systems).
+Newly added machines in a Razor deployment will PXE-boot from a special Razor
+Microkernel image, then check in, provide Razor with inventory information,
+and wait for further instructions. Razor will consult user-created policy
+rules to choose which recpies to apply to a new node, which will begin to
+follow the recipe directions, giving feedback to Razor as it completes various
+steps. Recipes can include steps for handoff to a DevOps system such as
+[Puppet](https://github.com/puppetlabs/puppet) or to any other system capable
+of controlling the node (such as a vCenter server taking possession of ESX
+systems).
 
 ***
 
 This is a [0.x release](http://semvber.org); that means that we might make
 backwards incompatible changes, especially to the database schema which
 would force you to rebuild all the machines that Razor is managing. The
-current code base is perfectlt suitable for evaluation and smaller lab
+current code base is perfectly suitable for evaluation and smaller lab
 setups but not for production use.
 
 ## Getting in touch
 
+* bug/issue tracker: [RAZOR project in JIRA](https://tickets.puppetlabs.com/browse/RAZOR)
 * on IRC: `#puppet-razor` on [freenode](http://freenode.net/)
 * mailing list: [puppet-razor@googlegroups.com](http://groups.google.com/group/puppet-razor)
 
@@ -35,7 +35,7 @@ The [Wiki](https://github.com/puppetlabs/razor-server/wiki) has all the
 details; in particular look at
 
 * [Installation](https://github.com/puppetlabs/razor-server/wiki/Installation): how to get a Razor environment up and running
-* [Geting started](https://github.com/puppetlabs/razor-server/wiki/Getting-started): using the CLI to do useful things
+* [Getting started](https://github.com/puppetlabs/razor-server/wiki/Getting-started): using the CLI to do useful things
 * [Developer setup](https://github.com/puppetlabs/razor-server/wiki/Developer-setup): for when you feel like hacking
 
 ## What does Razor do anyway ?

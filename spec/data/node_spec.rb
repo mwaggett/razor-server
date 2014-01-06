@@ -2,7 +2,7 @@ require_relative "../spec_helper"
 
 describe Razor::Data::Node do
   before(:each) do
-    use_installer_fixtures
+    use_recipe_fixtures
   end
 
   let (:policy) { Fabricate(:policy) }
@@ -369,6 +369,263 @@ describe Razor::Data::Node do
       expect { n.hostname = "host" }.to raise_error /frozen/
       expect { n.facts = { "f2" => "y" } }.to raise_error /frozen/
       expect { n.save }.to raise_error /frozen/
+    end
+  end
+
+  context "ipmi" do
+    context "validation" do
+      it "should work with only hostname set" do
+        # expect this to raise no errors
+        node.update(
+          :ipmi_hostname => Faker::Internet.ip_v4_address,
+          :ipmi_username => nil,
+          :ipmi_password => nil)
+      end
+
+      it "should work with implicit null username and password" do
+        # expect this to raise no errors
+        node.update(:ipmi_hostname => Faker::Internet.ip_v4_address)
+      end
+
+      it "should accept an IPv4 address for hostname" do
+        node.update(:ipmi_hostname => Faker::Internet.ip_v4_address)
+      end
+
+      it "should accept a hostname for address" do
+        node.update(:ipmi_hostname => Faker::Internet.domain_name)
+      end
+
+      it "should work with hostname and username" do
+        # expect this to raise no errors
+        node.update(
+          :ipmi_hostname => Faker::Internet.ip_v4_address,
+          :ipmi_username => Faker::Internet.user_name,
+          :ipmi_password => nil)
+      end
+
+      it "should work with hostname and password" do
+        # expect this to raise no errors
+        node.update(
+          :ipmi_hostname => Faker::Internet.ip_v4_address,
+          :ipmi_username => nil,
+          :ipmi_password => Faker::Internet.password[0..19])
+      end
+
+      it "should work with hostname, username, and password" do
+        # expect this to raise no errors
+        node.update(
+          :ipmi_hostname => Faker::Internet.ip_v4_address,
+          :ipmi_username => Faker::Internet.user_name,
+          :ipmi_password => Faker::Internet.password[0..19])
+      end
+
+      it "should fail with no hostname, but username" do
+        expect {
+        node.update(
+          :ipmi_hostname => nil,
+          :ipmi_username => Faker::Internet.user_name,
+          :ipmi_password => nil)
+        }.to raise_error Sequel::ValidationFailed, /also set an IPMI hostname/
+      end
+
+      it "should fail with no hostname, but password" do
+        expect {
+        node.update(
+          :ipmi_hostname => nil,
+          :ipmi_username => nil,
+          :ipmi_password => Faker::Internet.password[0..19])
+        }.to raise_error Sequel::ValidationFailed, /also set an IPMI hostname/
+      end
+
+      it "should fail with no hostname, but username, and password" do
+        expect {
+        node.update(
+          :ipmi_hostname => nil,
+          :ipmi_username => Faker::Internet.user_name,
+          :ipmi_password => Faker::Internet.password[0..19])
+        }.to raise_error Sequel::ValidationFailed, /also set an IPMI hostname/
+      end
+    end
+
+    describe "last_known_power_state" do
+      [true, false, nil].each do |value|
+        it "should update the timestamp when the power state is set to #{value.inspect}" do
+          Timecop.freeze do
+            # Make sure that we are not mis-detecting a previously set value
+            # on create or something like that as a pass.
+            Razor::Data::Node[:id => node.id].
+              last_power_state_update_at.should be_nil
+
+            node.update(:last_known_power_state => value).save
+
+            Razor::Data::Node[:id => node.id].
+              last_power_state_update_at.should == Time.now()
+          end
+        end
+      end
+    end
+
+    describe "update_power_state!" do
+      before :each do
+        node.update(:ipmi_hostname => Faker::Internet.domain_name).save
+      end
+
+      let :prehistory do Time.at(-446061360) end
+      let :thefuture  do Time.at(1445480880) end
+
+
+      # @todo danielp 2013-12-05: this stubs the IPMI on? question, which is
+      # kinda tied to implementation.  The alternative would be to stub out
+      # run, or the power state query mechanism, both of which are about as
+      # tied to implementation, so I don't feel too bad about this...
+
+      { 'on' => true, 'off' => false }.each do |name, value|
+        it "should update the power state if the machine is #{name}" do
+          Razor::IPMI.stub(:on?).and_return(value)
+
+          Timecop.freeze(prehistory) do
+            node.last_known_power_state.should be_nil
+            node.last_power_state_update_at.should be_nil
+
+            node.update_power_state!
+
+            node.last_known_power_state.should(value ? be_true : be_false)
+            node.last_power_state_update_at.should == prehistory
+          end
+        end
+      end
+
+      it "should update the power state if the same answer is gotten twice" do
+        Razor::IPMI.stub(:on?).and_return(true)
+
+        Timecop.freeze(prehistory) do
+          node.last_known_power_state.should be_nil
+          node.last_power_state_update_at.should be_nil
+
+          node.update_power_state!
+
+          node.last_known_power_state.should be_true
+          node.last_power_state_update_at.should == prehistory
+
+          Timecop.freeze(thefuture) do
+            node.update_power_state!
+            node.last_known_power_state.should be_true
+            node.last_power_state_update_at.should == thefuture
+          end
+        end
+      end
+
+      it "should update the power state to unknown and reraise if an IPMI error occurs" do
+        Razor::IPMI.stub(:on?).and_return(true)
+
+        Timecop.freeze(prehistory) do
+          node.last_known_power_state.should be_nil
+          node.last_power_state_update_at.should be_nil
+
+          node.update_power_state!
+
+          node.last_known_power_state.should be_true
+          node.last_power_state_update_at.should == prehistory
+
+          Timecop.freeze(thefuture) do
+            exception = Razor::IPMI::IPMIError(node, 'power_state', 'fake failure mode')
+            Razor::IPMI.stub(:on?).and_raise(exception)
+
+            expect {
+              node.update_power_state!
+            }.to raise_error exception.class, exception.message
+
+            node.last_known_power_state.should be_nil
+            node.last_power_state_update_at.should == thefuture
+          end
+        end
+      end
+
+      it "should not update the power state if a non-IPMI error occurs" do
+        Razor::IPMI.stub(:on?).and_return(true)
+
+        Timecop.freeze(prehistory) do
+          node.last_known_power_state.should be_nil
+          node.last_power_state_update_at.should be_nil
+
+          node.update_power_state!
+
+          node.last_known_power_state.should be_true
+          node.last_power_state_update_at.should == prehistory
+
+          Timecop.freeze(thefuture) do
+            exception = RuntimeError.new('this is your banana flavoured friend')
+            Razor::IPMI.stub(:on?).and_raise(exception)
+
+            expect {
+              node.update_power_state!
+            }.to raise_error exception.class, exception.message
+
+            node.last_known_power_state.should be_true
+            node.last_power_state_update_at.should == prehistory
+          end
+        end
+      end
+    end
+  end
+
+  context "installed state" do
+    it "is empty for new nodes" do
+      node.installed.should be_nil
+      node.installed_at.should be_nil
+    end
+
+    it "stays empty when stage_done is called with a name != 'finished'" do
+      Node.stage_done(node.id, 'some stage').should be_true
+
+      node.reload
+      node.installed.should be_nil
+      node.installed_at.should be_nil
+    end
+
+    it "gets set when stage_done is called with name == 'finished'" do
+      node.bind(policy)
+      node.save
+
+      Node.stage_done(node.id, 'finished').should be_true
+      node.reload
+
+      node.installed.should == policy.name
+      node.installed_at.should_not be_nil
+    end
+
+    it "is reset when an installed node is rebound" do
+      node = Fabricate(:node, :installed => 'old_stuff',
+                              :installed_at => DateTime.now)
+      node.bind(policy)
+      node.installed.should be_nil
+      node.installed_at.should be_nil
+    end
+  end
+
+  context "search" do
+    before(:each) do
+      @node1 = Fabricate(:node, :hostname => "host1.example.com")
+      @node2 = Fabricate(:node, :hostname => "host2.example.com")
+    end
+
+    it "should look for hostnames as a regexp" do
+      Node.search("hostname" => "host1.*").all.should == [ @node1 ]
+      Node.search("hostname" => "host.*").all.should =~ [ @node1, @node2 ]
+    end
+
+    it "should look for MACs case-insensitively" do
+      mac = @node1.hw_hash["mac"].first
+      Node.search("mac" => mac).all.should == [ @node1 ]
+      Node.search("mac" => mac.upcase).all.should == [ @node1 ]
+      Node.search("mac" => mac.upcase).all.should == [ @node1 ]
+      Node.search("mac" => mac.upcase.gsub("-", ":")).all.should == [ @node1 ]
+    end
+
+    it "should look for asset tags" do
+      asset = @node1.hw_hash["asset"]
+      Node.search("asset" => asset).all.should == [ @node1 ]
+      Node.search("asset" => asset.upcase).all.should == [ @node1 ]
     end
   end
 end
