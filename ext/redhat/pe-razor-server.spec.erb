@@ -94,7 +94,7 @@ rm -rf vendor/bundle/jruby/1.9/cache
 
 # Copy the other stuff.
 cp -pr  .bundle brokers db lib app.rb config.ru Gemfile Gemfile.lock \
-        jars LICENSE NEWS.md Rakefile recipes README.md torquebox.rb \
+        jars LICENSE NEWS.md Rakefile README.md tasks torquebox.rb \
         %{buildroot}%{_datadir}/razor-server
 
 cp -p   bin/razor-admin %{buildroot}%{_datadir}/razor-server/bin

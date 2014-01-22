@@ -35,8 +35,8 @@ files:
   - LICENSE
   - NEWS.md
   - Rakefile
-  - recipes
   - README.md
+  - tasks
   - torquebox.rb
   - vendor
   - .bundle
