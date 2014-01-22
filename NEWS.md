@@ -1,5 +1,45 @@
 # Razor Server Release Notes
 
+## 0.13.0 - 2014-01-21
+
++ 'recipes' (neé installers) are now called 'tasks', as the word recipes is
+  prominently used by Chef and would just lead to confusion
++ IPMI support now allows rebooting nodes, and setting a desired power stat
+  ('on' or 'off') which the server will enforce
+
+### Public API changes
+
++ incompatible changes
+  + the way how policy ordering is handled has changed: instead of exposing
+    a `rule_number` that has to be set in `create-policy`, new policies are
+    now by default appended to the policy table. Their position can be
+    controlled with the `before` and `after` parameters to the
+    `create-policy` command. The `rule_number` is not part of the view of a
+    policy anymore either. To determine the order of policies, they need to
+    be listed with `/api/collections/policies` which returns all policies
+    in the order in which they are matched against a node
++ the `node` object view has changed:
+  - the `node["state"]["power"]` field is removed.
+  - the `node["power"]` object is added with the fields:
+    * `"desired_power_state"` reflecting the configured desired power state for the node
+    * `"last_known_power_state"` reflecting the last observed power state
+    * `"last-power_state_update_at"` reflecting the point in time that power state observation was taken.
+  - it is important to note that this is not a real-time power state, but a
+    scheduled observation; do not assume that the last known state reflects
+    current reality.
++ new commands
+  + `move-policy` to move a policy before/after another policy
+  + `reboot-node` to reboot a node via IPMI (soft and hard)
+  + `set-node-desired-power-state` to indicate whether a node should be
+    `on` or `off` and have Razor enforce that
+  + `delete-broker` makes it possible to delete existing brokers
++ policies can seed the metadata for nodes; this is set via the
+`node_metadata` parameter of the `create-policy` command (Chris Portmann)
++ the details for a broker now have a `policies` collection which shows the
+  policies using that broker
++ the new puppet-pe broker allows seamless integration with the simplified
+  installation in a forthcoming PE release
+
 ## 0.12.0 - 2014-01-03
 
 + the server's management API underneath `/api` can now be protected with

@@ -20,6 +20,8 @@ class Razor::App < Sinatra::Base
     # into place our security manager and subject instance.  We only protect
     # paths if security is enabled, though.
     use Razor::Middleware::Auth, %r{/api($|/)}i
+
+    set :show_exceptions, false
   end
 
   before do
@@ -153,7 +155,7 @@ class Razor::App < Sinatra::Base
       end
     end
 
-    # @todo lutter 2013-08-21: all the recipes need to be adapted to do a
+    # @todo lutter 2013-08-21: all the tasks need to be adapted to do a
     # 'curl <%= stage_done_url %> to signal that they are ready to proceed to
     # the next stage in the boot sequence
     def stage_done_url(name = "")
@@ -197,11 +199,22 @@ class Razor::App < Sinatra::Base
     status [500, env["sinatra.error"].message]
   end
 
+  error org.apache.shiro.authz.UnauthorizedException do
+    status [403, env["sinatra.error"].to_s]
+  end
+
+  [ArgumentError, TypeError, Sequel::ValidationFailed, Sequel::Error].each do |fault|
+    error fault do
+      status [400, env["sinatra.error"].to_s]
+    end
+  end
+
+
   # Convenience for /svc/boot and /svc/file
   def render_template(name)
-    locals = { :recipe => @recipe, :node => @node, :repo => @repo }
+    locals = { :task => @task, :node => @node, :repo => @repo }
     content_type 'text/plain'
-    template, opts = @recipe.find_template(name)
+    template, opts = @task.find_template(name)
     erb template, opts.merge(locals: locals, layout: false)
   end
 
@@ -232,7 +245,7 @@ class Razor::App < Sinatra::Base
   #
   # @todo lutter 2013-09-04: this code assumes that we can tell an MK its
   # unique checkin URL, which is true for MK's that boot through
-  # +recipes/microkernel/boot.erb+. If we need to allow booting of MK's by
+  # +tasks/microkernel/boot.erb+. If we need to allow booting of MK's by
   # other means, we'd need to convince facter to send us the same hw_info that
   # iPXE does and identify the node via +Node.lookup+
   post '/svc/checkin/:id' do
@@ -256,7 +269,7 @@ class Razor::App < Sinatra::Base
   # Take a hardware ID bundle, match it to a node, and return the unique node
   # ID.  This is for the benefit of the Windows installer client, which can't
   # take any dynamic content from the boot loader, and potentially any future
-  # recipe (or other utility) which can identify the hardware details, but not
+  # task (or other utility) which can identify the hardware details, but not
   # the node ID, to get that ID.
   #
   # GET the URL, with `netN` keys for your network cards, and optionally a
@@ -298,7 +311,7 @@ class Razor::App < Sinatra::Base
       return 400
     end
 
-    @recipe = @node.recipe
+    @task = @node.task
 
     if @node.policy
       @repo = @node.policy.repo
@@ -314,9 +327,9 @@ class Razor::App < Sinatra::Base
       @repo = Razor::Data::Repo.new(:name => "microkernel",
                                     :iso_url => "file:///dev/null")
     end
-    template = @recipe.boot_template(@node)
+    template = @task.boot_template(@node)
 
-    @node.log_append(:event => :boot, :recipe => @recipe.name,
+    @node.log_append(:event => :boot, :task => @task.name,
                      :template => template, :repo => @repo.name)
     @node.save
     render_template(template)
@@ -332,13 +345,13 @@ class Razor::App < Sinatra::Base
 
     halt 409 unless @node.policy
 
-    @recipe = @node.recipe
+    @task = @node.task
     @repo = @node.policy.repo
 
     @node.log_append(:event => :get_raw_file, :template => params[:filename],
                      :url => request.url)
 
-    fpath = @recipe.find_file(params[:filename]) or halt 404
+    fpath = @task.find_file(params[:filename]) or halt 404
     content_type nil
     send_file fpath, :disposition => nil
   end
@@ -350,7 +363,7 @@ class Razor::App < Sinatra::Base
 
     halt 409 unless @node.policy
 
-    @recipe = @node.recipe
+    @task = @node.task
     @repo = @node.policy.repo
 
     @node.log_append(:event => :get_file, :template => params[:template],
@@ -407,7 +420,7 @@ class Razor::App < Sinatra::Base
     root = File.expand_path(Razor.config['repo_store_root'])
 
     # Unfortunately, we face some complexities.  The ISO9660 format only
-    # supports upper-case filenames, but some recipes assume they will be
+    # supports upper-case filenames, but some tasks assume they will be
     # mapped to lower-case automatically.  If that doesn't happen, we can
     # hit trouble.  So, to make this more user friendly we look for a
     # case-insensitive match on the file.
@@ -424,7 +437,7 @@ class Razor::App < Sinatra::Base
   #
   # @todo danielp 2013-06-26: this should be some sort of discovery, not a
   # hand-coded list, but ... it will do, for now.
-  COLLECTIONS = [:brokers, :repos, :tags, :policies, :nodes, :recipes]
+  COLLECTIONS = [:brokers, :repos, :tags, :policies, :nodes, :tasks]
 
   #
   # The main entry point for the public/management API
@@ -484,11 +497,7 @@ class Razor::App < Sinatra::Base
       # (recursively) so that we do not use '_' in the API (i.e., this also
       # requires fixing up view.rb)
 
-      begin
-        result = instance_exec(data, &block)
-      rescue => e
-        error 400, :details => e.to_s
-      end
+      result = instance_exec(data, &block)
       result = view_object_reference(result) unless result.is_a?(Hash)
       [202, result.to_json]
     end
@@ -542,7 +551,7 @@ class Razor::App < Sinatra::Base
   command :delete_policy do |data|
     #deleting a policy will first remove the policy from any node
     #associated with it.  The node will remain bound, resulting in the
-    #noop recipe being associated on boot (causing a local boot)
+    #noop task being associated on boot (causing a local boot)
     data['name'] or error 400,
       :error => "Supply 'name' to indicate which policy to delete"
     if policy = Razor::Data::Policy[:name => data['name']]
@@ -565,8 +574,15 @@ class Razor::App < Sinatra::Base
     data['value'] or error 400,
       :error => 'must supply value'
 
+    if data['no_replace']
+      data['no_replace'] == true or data['no_replace'] == 'true' or error 400,
+        :error => "no_replace must be boolean true or string 'true'"
+    end
+
     if node = Razor::Data::Node.find_by_name( data['node'] )
       operation = { 'update' => { data['key'] => data['value'] } }
+      operation['no_replace'] = true unless operation['no_replace'].nil?
+
       node.modify_metadata(operation)
     else
       error 400, :error => "Node #{data['node']} not found"
@@ -608,6 +624,11 @@ class Razor::App < Sinatra::Base
         :error => "clear must be boolean true or string 'true'"
     end
 
+    if data['no_replace']
+      data['no_replace'] == true or data['no_replace'] == 'true' or error 400,
+        :error => "no_replace must be boolean true or string 'true'"
+    end
+
     if data['update'] and data['remove']
       data['update'].keys.concat(data['remove']).uniq! and error 400,
         :error => 'cannot update and remove the same key'
@@ -640,6 +661,9 @@ class Razor::App < Sinatra::Base
         node.installed_at = nil
         actions << "installed flag cleared"
       end
+      if actions.empty?
+        actions << "no changes; node #{data['name']} was neither bound nor installed"
+      end
       node.log_append(log)
       node.save
     else
@@ -670,18 +694,58 @@ class Razor::App < Sinatra::Base
     { :result => 'updated IPMI details' }
   end
 
-  command :create_recipe do |data|
-    check_permissions! "commands:create-recipe:#{data['name']}"
+  command :reboot_node do |data|
+    data['name'] or
+      error 400, :error => "Supply 'name' to indicate which node to edit"
 
-    # If boot_seq is not a Hash, the model validation for recipes
-    # will catch that, and will make saving the recipe fail
+    case data['hard']
+    when nil, true, false then # do nothing
+    else error 400, :error => 'the "hard" attribute must be a boolean, or omitted'
+    end
+
+    check_permissions! "commands:reboot-node:#{data['name']}:#{data['hard'] ? 'hard' : 'soft'}"
+
+    node = Razor::Data::Node.find_by_name(data['name']) or
+      error 404, :error => "node #{data['name']} does not exist"
+
+    node.ipmi_hostname or
+      error 422, { :error => "node #{node.name} does not have IPMI credentials set" }
+
+    node.publish 'reboot!', !!data['hard']
+
+    { :result => 'reboot request queued' }
+  end
+
+  command :set_node_desired_power_state do |data|
+    data['name'] or
+      error 400, :error => "Supply 'name' to indicate which node to edit"
+
+    check_permissions! "commands:set-node-desired-power-state:#{data['name']}"
+
+    node = Razor::Data::Node.find_by_name(data['name']) or
+      error 404, :error => "node #{data['name']} does not exist"
+
+    case data['to']
+    when 'on', 'off', nil
+      node.set(desired_power_state: data['to']).save
+      {result: "set desired power state to #{data['to'] || 'ignored (null)'}"}
+    else
+      error 400, :error => "invalid power state #{data['to']}"
+    end
+  end
+
+  command :create_task do |data|
+    check_permissions! "commands:create-task:#{data['name']}"
+
+    # If boot_seq is not a Hash, the model validation for tasks
+    # will catch that, and will make saving the task fail
     if (boot_seq = data["boot_seq"]).is_a?(Hash)
       # JSON serializes integers as strings, undo that
       boot_seq.keys.select { |k| k.is_a?(String) and k =~ /^[0-9]+$/ }.
         each { |k| boot_seq[k.to_i] = boot_seq.delete(k) }
     end
 
-    Razor::Data::Recipe.new(data).save.freeze
+    Razor::Data::Task.new(data).save.freeze
   end
 
   command :create_tag do |data|
@@ -742,6 +806,24 @@ class Razor::App < Sinatra::Base
     Razor::Data::Broker.new(data).save
   end
 
+  command :delete_broker do |data|
+    check_permissions! "commands:delete-broker:#{data['name']}"
+
+    data['name'] or error 400,
+      :error => "Supply 'name' to indicate which broker to delete"
+
+    if broker = Razor::Data::Broker[:name => data['name']]
+      broker.policies.count == 0 or
+        error 400, :error => "Broker #{broker.name} is still used by policies"
+
+      broker.destroy
+      action = "broker #{data['name']} destroyed"
+    else
+      action = "no changes; broker #{data['name']} does not exist"
+    end
+    { :result => action }
+  end
+
   command :create_policy do |data|
     check_permissions! "commands:create-policy:#{data['name']}"
 
@@ -763,13 +845,60 @@ class Razor::App < Sinatra::Base
         halt [400, "Broker '#{name}' not found"]
     end
 
-    if data["recipe"]
-      data["recipe_name"] = data.delete("recipe")["name"]
+    if data["task"]
+      data["task_name"] = data.delete("task")["name"]
     end
     data["hostname_pattern"] = data.delete("hostname")
 
+    # Handle positioning in the policy table
+    position = nil
+    neighbor = nil
+    if data["before"] or data["after"]
+      not data.key?("before") or not data.key?("after") or
+        error 400, :error => "Only specify one of 'before' or 'after'"
+      position = data["before"] ? "before" : "after"
+      name = data.delete(position)["name"] or
+        error 400,
+          :error => "The policy reference in '#{position}' must have a name"
+      neighbor = Razor::Data::Policy[:name => name] or
+        error 400,
+      :error => "Policy '#{name}' referenced in '#{position}' not found"
+    end
+
+    # Create the policy
     policy = Razor::Data::Policy.new(data).save
     tags.each { |t| policy.add_tag(t) }
+    policy.move(position, neighbor) if position
+    policy.save
+
+    policy
+  end
+
+  command :move_policy do |data|
+    check_permissions! "commands:move-policy:#{data['name']}"
+
+    data['name'] or error 400,
+      :error => "Supply 'name' to indicate which policy to move"
+    policy = Razor::Data::Policy[:name => data['name']] or error 400,
+      :error => "Policy #{data['name']} does not exist"
+
+    position = nil
+    neighbor = nil
+    if data["before"] or data["after"]
+      not data.key?("before") or not data.key?("after") or
+        error 400, :error => "Only specify one of 'before' or 'after'"
+      position = data["before"] ? "before" : "after"
+      name = data[position]["name"] or
+        error 400,
+          :error => "The policy reference in '#{position}' must have a name"
+      neighbor = Razor::Data::Policy[:name => name] or
+        error 400,
+      :error => "Policy '#{name}' referenced in '#{position}' not found"
+    else
+      error 400, :error => "You must specify either 'before' or 'after'"
+    end
+
+    policy.move(position, neighbor) if position
     policy.save
 
     policy
@@ -912,6 +1041,12 @@ class Razor::App < Sinatra::Base
     broker_hash(broker).to_json
   end
 
+  get '/api/collections/brokers/:name/policies' do
+    broker = Razor::Data::Broker[:name => params[:name]] or
+      halt 404, "no broker matched id=#{params[:name]}"
+    collection_view(broker.policies, "policies")
+  end
+
   get '/api/collections/policies' do
     collection_view Razor::Data::Policy.order(:rule_number), 'policies'
   end
@@ -928,18 +1063,18 @@ class Razor::App < Sinatra::Base
     collection_view(policy.nodes, "nodes")
   end
 
-  get '/api/collections/recipes' do
-    collection_view Razor::Recipe, 'recipes'
+  get '/api/collections/tasks' do
+    collection_view Razor::Task, 'tasks'
   end
 
-  get '/api/collections/recipes/:name' do
+  get '/api/collections/tasks/:name' do
     begin
-      recipe = Razor::Recipe.find(params[:name])
-    rescue Razor::RecipeNotFoundError => e
-      error 404, :error => "Recipe #{params[:name]} does not exist",
+      task = Razor::Task.find(params[:name])
+    rescue Razor::TaskNotFoundError => e
+      error 404, :error => "Task #{params[:name]} does not exist",
         :details => e.to_s
     end
-    recipe_hash(recipe).to_json
+    task_hash(task).to_json
   end
 
   get '/api/collections/repos' do
@@ -985,7 +1120,7 @@ class Razor::App < Sinatra::Base
     # How many NICs ipxe should probe for DHCP
     @nic_max = params["nic_max"].nil? ? 4 : params["nic_max"].to_i
 
-    @recipe = Razor::Recipe.mk_recipe
+    @task = Razor::Task.mk_task
 
     render_template("bootstrap")
   end

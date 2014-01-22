@@ -50,7 +50,7 @@ module Razor
 
       view_object_hash(policy).merge({
         :repo => view_object_reference(policy.repo),
-        :recipe => view_object_reference(policy.recipe),
+        :task => view_object_reference(policy.task),
         :broker => view_object_reference(policy.broker),
         :enabled => !!policy.enabled,
         :max_count => policy.max_count != 0 ? policy.max_count : nil,
@@ -58,12 +58,12 @@ module Razor
           :hostname_pattern => policy.hostname_pattern,
           :root_password => policy.root_password,
         },
-        :rule_number => policy.rule_number,
         :tags => policy.tags.map {|t| view_object_reference(t) }.compact,
+        :node_metadata => policy.node_metadata || {},
         :nodes => { :id => view_object_url(policy) + "/nodes",
                     :count => policy.nodes.count,
                     :name => "nodes" }
-      })
+      }).delete_if {|k,v| v.nil? or ( v.is_a? Hash and v.empty? ) }
     end
 
     def tag_hash(tag)
@@ -94,26 +94,29 @@ module Razor
       view_object_hash(broker).merge(
         :spec            => compose_url('spec', 'object', 'broker'),
         :configuration   => broker.configuration,
-        :"broker-type"   => broker.broker_type)
+        :"broker-type"   => broker.broker_type,
+        :policies        => { :id => view_object_url(broker) + "/policies",
+                              :count => broker.policies.count,
+                              :name => "policies" })
     end
 
-    def recipe_hash(recipe)
-      return nil unless recipe
+    def task_hash(task)
+      return nil unless task
 
-      if recipe.base
-        base = { :base => view_object_reference(recipe.base) }
+      if task.base
+        base = { :base => view_object_reference(task.base) }
       else
         base = {}
       end
 
       # FIXME: also return templates, requires some work for file-based
-      # recipes
-      view_object_hash(recipe).merge(base).merge({
+      # tasks
+      view_object_hash(task).merge(base).merge({
         :os => {
-          :name => recipe.os,
-          :version => recipe.os_version }.delete_if {|k,v| v.nil? },
-        :description => recipe.description,
-        :boot_seq => recipe.boot_seq
+          :name => task.os,
+          :version => task.os_version }.delete_if {|k,v| v.nil? },
+        :description => task.description,
+        :boot_seq => task.boot_seq
       }).delete_if {|k,v| v.nil? }
     end
 
@@ -124,14 +127,7 @@ module Razor
     def node_hash(node)
       return nil unless node
 
-      boot_stage = node.policy ? node.recipe.boot_template(node) : nil
-      if node.last_known_power_state.nil?
-        power_state = nil
-      elsif node.last_known_power_state
-        power_state = 'on'
-      else
-        power_state = 'off'
-      end
+      boot_stage = node.policy ? node.task.boot_template(node) : nil
 
       view_object_hash(node).merge(
         :hw_info       => node.hw_hash,
@@ -146,7 +142,11 @@ module Razor
           :installed    => node.installed,
           :installed_at => ts(node.installed_at),
           :stage        => boot_stage,
-          :power        => power_state
+        }.delete_if { |k,v| v.nil? },
+        :power => {
+          :desired_power_state        => node.desired_power_state,
+          :last_known_power_state     => node.last_known_power_state,
+          :last_power_state_update_at => node.last_power_state_update_at
         }.delete_if { |k,v| v.nil? },
         :hostname      => node.hostname,
         :root_password => node.root_password,

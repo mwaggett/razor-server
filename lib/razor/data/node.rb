@@ -82,13 +82,13 @@ module Razor::Data
       end
     end
 
-    def recipe
+    def task
       if policy
-        policy.recipe
+        policy.task
       elsif installed
-        Razor::Recipe.noop_recipe
+        Razor::Task.noop_task
       else
-        Razor::Recipe.mk_recipe
+        Razor::Task.mk_task
       end
     end
 
@@ -149,9 +149,9 @@ module Razor::Data
       # policy is bound to it. There's two improvements that could be made:
       # 1. not every policy will be destructive, and we should preserve the
       #    'installed' state for non-destructive policies (requires additional
-      #    metadata in recipes)
+      #    metadata in tasks)
       # 2. there's a small time window between binding the node and the
-      #    recipe booting in which the node technically is still installed.
+      #    task booting in which the node technically is still installed.
       #    We could reset the installed fields only when we boot into the new
       #    policy for the first time, but it seems like a minor win, and would
       #    require a flag to remember whether we've already booted into a
@@ -160,6 +160,12 @@ module Razor::Data
       self.installed_at = nil
       self.root_password = policy.root_password
       self.hostname = policy.hostname_pattern.gsub(/\$\{\s*id\s*\}/, id.to_s)
+
+      if policy.node_metadata
+        modify_metadata('no_replace' => true, 'update' => policy.node_metadata)
+      end
+
+      self
     end
 
     # This is a hack around the fact that the auto_validates plugin does
@@ -229,8 +235,9 @@ module Razor::Data
 
       if data['update']
         data['update'].is_a? Hash or raise ArgumentError, 'update must be a hash'
+        replace = (not [true, 'true'].include?(data['no_replace']))
         data['update'].each do |k,v|
-          new_metadata[k] = v
+          new_metadata[k] = v if replace or not new_metadata[k]
         end
       end
       if data['remove']
@@ -392,15 +399,47 @@ module Razor::Data
     # We update our power state regardless of the outcome, including setting
     # it to "unknown" on failures of the IPMI code, though not on failures
     # like command execution blowing up.
+    #
+    # If we have a current power state, and a desired power state, and they
+    # don't match, we also queue work to toggle power into the
+    # appropriate state.
     def update_power_state!
       begin
-        self.last_known_power_state = Razor::IPMI.on?(self)
+        self.last_known_power_state = Razor::IPMI.on?(self) ? 'on' : 'off'
+
+        # If we have both a desired and known power state...
+        unless self.desired_power_state.nil? or self.last_known_power_state.nil?
+          # ...and they don't match...
+          unless self.desired_power_state == self.last_known_power_state
+            # ...toggle our power state to what is desired.  This is put into
+            # the background because it isn't actually related to our current
+            # transaction, and that ensures we do the right thing later.
+            self.publish(self.desired_power_state)
+          end
+        end
       rescue Razor::IPMI::IPMIError
         self.last_known_power_state = nil
         raise
       ensure
         self.save_changes
       end
+    end
+
+    # Request a reboot from the machine via IPMI.  This supports both hard and
+    # soft reboots.  This is synchronous, and is expected to be called in the
+    # background from the message queue.
+    def reboot!(hard)
+      Razor::IPMI.reset(self, hard)
+    end
+
+    # Turn the node on.
+    def on
+      Razor::IPMI.power(self, true)
+    end
+
+    # Turn the node off.
+    def off
+      Razor::IPMI.power(self, false)
     end
   end
 end

@@ -142,6 +142,22 @@ EOT
       end
     end
 
+    context "power" do
+      it "should power on successfully" do
+        fake_run('power on', <<EOT, '')
+Chassis Power Control: Up/On
+EOT
+        Razor::IPMI.power(ipmi_node, true)
+      end
+
+      it "should power off successfully" do
+        fake_run('power off', <<EOT, '')
+Chassis Power Control: Down/Off
+EOT
+        Razor::IPMI.power(ipmi_node, false)
+      end
+    end
+
     describe "boot_from_device" do
       it "should raise an error if a bad device name is passed" do
         expect {
@@ -164,6 +180,38 @@ EOT
         expect {
           Razor::IPMI.boot_from_device(ipmi_node, 'pxe')
         }.to raise_error Razor::IPMI::IPMIError, /system responded with boot device "Network" not "pxe"/
+      end
+    end
+
+    describe "reset" do
+      it "should return true if hard reset" do
+        fake_run('power reset', <<EOT, '')
+Chassis Power Control: Reset
+EOT
+        Razor::IPMI.reset(ipmi_node, true).should be_true
+      end
+
+      it "should return true if soft reset" do
+        fake_run('power soft', <<EOT, '')
+Chassis Power Control: Soft
+EOT
+        Razor::IPMI.reset(ipmi_node, false).should be_true
+      end
+
+      it "should default to soft reset" do
+        fake_run('power soft', <<EOT, '')
+Chassis Power Control: Soft
+EOT
+        Razor::IPMI.reset(ipmi_node).should be_true
+      end
+
+      it "should raise if a hard reset results from a soft reset request" do
+        fake_run('power soft', <<EOT, '')
+Chassis Power Control: Reset
+EOT
+        expect {
+          Razor::IPMI.reset(ipmi_node)
+        }.to raise_error Razor::IPMI::IPMIError, /output did not indicate reset operation/
       end
     end
 

@@ -24,6 +24,14 @@ Fabricator(:broker, :class_name => Razor::Data::Broker) do
   end
 end
 
+Fabricator(:broker_with_policy, from: :broker) do
+  after_build do |broker, _|
+    policy = Fabricate(:policy)
+    broker.save
+    policy.broker = broker
+    policy.save
+  end
+end
 
 Fabricator(:repo, :class_name => Razor::Data::Repo) do
   name      { Faker::Commerce.product_name + " #{Fabricate.sequence}" }
@@ -31,7 +39,7 @@ Fabricator(:repo, :class_name => Razor::Data::Repo) do
 end
 
 
-Fabricator(:recipe, :class_name => Razor::Data::Recipe) do
+Fabricator(:task, :class_name => Razor::Data::Task) do
   name          { Faker::Commerce.product_name + " #{Fabricate.sequence}" }
   os            { Faker::Commerce.product_name }
   os_version    { random_version }
@@ -47,10 +55,9 @@ end
 Fabricator(:policy, :class_name => Razor::Data::Policy) do
   name             { Faker::Commerce.product_name + " #{Fabricate.sequence}" }
   enabled          true
-  recipe_name      { Fabricate(:recipe).name }
+  task_name      { Fabricate(:task).name }
   hostname_pattern 'host${id}.example.org'
   root_password    { Faker::Internet.password }
-  rule_number      { Fabricate.sequence(:razor_data_policy_rule_number, 100) }
 
   repo
   broker
