@@ -40,3 +40,4 @@ files:
   - torquebox.rb
   - vendor
   - .bundle
+tar_excludes: "brokers/chef.broker"
