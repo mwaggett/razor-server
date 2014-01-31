@@ -1,44 +1,38 @@
 #!/bin/bash
 #
-# pe-razor-server startup script
+# razor-server sysv startup script for multiple platforms
+#
+<%= @description.gsub(/^/, '# ').chomp %>
 #
 # chkconfig: - 80 20
-# description: pe-razor-server
+# description: razor-server
 # processname: standalone
-# pidfile: /var/run/pe-razor-server.pid
+# pidfile: /var/run/razor-server.pid
 
-NAME="pe-razor-server"
+# Ensure we have a sensible umask
+umask 0027
+
+NAME="razor-server"
 WAIT=30 # seconds
 
-# Set defaults.
-TORQUEBOX_HOME="/opt/puppet/share/torquebox"
-JBOSS_HOME="${TORQUEBOX_HOME}/jboss"
-JRUBY_HOME="${TORQUEBOX_HOME}/jruby"
-export TORQUEBOX_HOME JBOSS_HOME JRUBY_HOME
+# Load the location data from our torquebox installation
+source /etc/razor/razor-torquebox.sh
 
-PATH="${JRUBY_HOME}/bin:${PATH}"
-export PATH
+# Other configuration
+export JBOSS_PIDFILE="/var/run/${NAME}/torquebox.pid"
 
-JBOSS_PIDFILE="/var/run/${NAME}/torquebox.pid"
-export JBOSS_PIDFILE
+export JBOSS_LOG_DIR="/var/log/${NAME}"
+export JBOSS_CONSOLE_LOG="${JBOSS_LOG_DIR}/console.log"
 
-JBOSS_LOG_DIR="/var/log/${NAME}"
-JBOSS_CONSOLE_LOG="${JBOSS_LOG_DIR}/console.log"
-export JBOSS_LOG_DIR JBOSS_CONSOLE_LOG
+JBOSS_USER="razor"
 
-JBOSS_USER="pe-razor"
-
-JBOSS_CONFIG=standalone.xml
+JBOSS_CONFIG="standalone.xml"
 JBOSS_SCRIPT="${JBOSS_HOME}/bin/standalone.sh"
+
+JBOSS_LIB="/var/lib/razor"
 
 LAUNCH_JBOSS_IN_BACKGROUND=true
 export LAUNCH_JBOSS_IN_BACKGROUND
-
-export LANG=en_US.UTF-8
-
-# Load overrides and defaults. Fail if it isn't there.
-[ -e "/etc/sysconfig/${NAME}" ] || exit 1
-[ -e "/etc/sysconfig/${NAME}" ] && . "/etc/sysconfig/${NAME}"
 
 start() {
     echo -n "Launching ${NAME}: "
@@ -56,13 +50,13 @@ start() {
     # since some distributions put it on a ramfs -- and not unreasonably.
     mkdir -p --mode 0755 "$(dirname "${JBOSS_PIDFILE}")"
     echo >"${JBOSS_PIDFILE}"
-    chown "${JBOSS_USER}" "$(dirname "${JBOSS_PIDFILE}")" "${JBOSS_PIDFILE}"
+    chown "${JBOSS_USER}" "${JBOSS_PIDFILE}"
 
     # Delegate to another instance of the same script, run as another user, to
     # actually fire off the software.  This helps isolate the context between
     # the two, and ensures we don't depend on, eg, environment variables being
     # copied by su -- which is less reliable than one may hope.
-    runuser -s /bin/bash "${JBOSS_USER}" -c "$0 run" &
+    su "${JBOSS_USER}" -c "$0 run" &
     pid=$!
     disown ${pid}
 
@@ -101,8 +95,8 @@ start() {
 # This actually runs the software; we assume we are already running as the
 # subordinate user, and start in the background.
 run() {
-    exec >&"${JBOSS_CONSOLE_LOG}" \
-        "${JBOSS_SCRIPT}" "-Djboss.server.log.dir=${JBOSS_LOG_DIR}" "-Dhttp.port=${RAZOR_PORT}" \
+    exec >&"${JBOSS_CONSOLE_LOG}" "${JBOSS_SCRIPT}" \
+        "-Djboss.server.log.dir=${JBOSS_LOG_DIR}" \
         "-b" "0.0.0.0"
 }
 
@@ -149,11 +143,11 @@ status() {
 }
 
 case "$1" in
-    start)   start ;;
-    # used internally to manage user switching, not mentioned to user
-    run)     run ;;
-    stop)    stop ;;
-    status) status ;;
+    start)      start   ;;
+    # used internally to manage user switching
+    run)        run     ;;
+    stop)       stop    ;;
+    status)     status  ;;
     restart)
         $0 stop
         $0 start
