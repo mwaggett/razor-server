@@ -6,5 +6,5 @@ log/*
 /Gemfile.local*
 /coverage
 /.project
-ext/packaging
 /.ruby-version
+/ext/packaging/
