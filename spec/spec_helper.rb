@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 require 'simplecov'
 SimpleCov.start do
   %w{/spec/ .erb vendor/}.map {|f| add_filter f }
@@ -68,6 +69,20 @@ end
 
 def use_broker_fixtures
   Razor.config["broker_path"] = BROKER_FIXTURE_PATH
+end
+
+# Make sure our migration is current, or fail hard.
+Sequel.extension :migration
+unless Sequel::Migrator.is_current?(Razor.database, File.join(File::dirname(__FILE__), '..', 'db', 'migrate'))
+  puts <<EOT
+Hey.  Your database migrations are not current!  Without them being at the
+exact expected version you can expect all sorts of random looking failures.
+
+You should rerun the migrations now.  That will fix things and stop this
+error from getting in your way.  Enjoy.
+
+EOT
+  exit 1
 end
 
 # Restore the config after each test

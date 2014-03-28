@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 require 'tmpdir'
 require 'open-uri'
 require 'uri'
@@ -44,9 +45,9 @@ module Razor::Data
     def validate
       super
       if url and iso_url
-        errors.add(:urls, "either url or iso_url must be given")
+        errors.add(:urls, _("only one of the 'url' and 'iso_url' attributes can be set at the same time"))
       elsif url.nil? and iso_url.nil?
-        errors.add(:urls, "only one of url and iso_url can be used")
+        errors.add(:urls, _("you must set one of the 'url' or 'iso_url' attributes"))
       end
     end
 
@@ -58,7 +59,7 @@ module Razor::Data
     def make_the_repo_accessible
       url = URI.parse(iso_url)
       if url.scheme.downcase == 'file'
-        File.readable?(url.path) or raise "unable to read local file #{url.path}"
+        File.readable?(url.path) or raise _("unable to read local file %{path}") % {path: url.path}
         publish 'unpack_repo', url.path
       else
         publish 'unpack_repo', download_file_to_tempdir(url)
@@ -82,35 +83,29 @@ module Razor::Data
       tmpdir   = Pathname(Dir.mktmpdir("razor-repo-#{filesystem_safe_name}-download"))
       filename = tmpdir + Pathname(url.path).basename
 
-      File.open(filename, CreateFileForWrite, 0600) do |dest|
-        url.open do |source|
-          # JRuby 1.7.4 requires String or IO class be passed to
-          # `IO.copy_stream`, which unfortunately precludes our using it.
-          # open-uri sanely returns StringIO for short bodies, which just
-          # don't work here.  We should replace it with the cleaner
-          # one-function version when we can.
-          #
-          # Preallocating the buffer reduces object churn.
-          buffer = ''
-          while source.read(BufferSize, buffer)
-            written = dest.write(buffer)
-            unless written == buffer.size
-              raise "download_file_to_tempdir(#{url}): unable to cope with partial write of #{written} bytes when #{buffer.size} expected"
-            end
-          end
-
-          # Try and get our data out to disk safely before we consider the
-          # write completed.  That way a crash won't leak partial state, given
-          # our database does try and be this conservative too.
-          begin
-            dest.flush
-            dest.respond_to?('fdatasync') ? dest.fdatasync : dest.fsync
-          rescue NotImplementedError
-            # This signals that neither fdatasync nor fsync could be used on
-            # this IO, which we can politely ignore, because what the heck can
-            # we do anyhow?
-          end
+      result = url.open
+      unless result.is_a?(File)
+        # Create Tempfile to converge code flow.
+        tmpfile = Tempfile.new filename.to_s
+        tmpfile.binmode
+        tmpfile << result.read
+        result = tmpfile
+      end
+      begin
+        # Try and get our data out to disk safely before we consider the
+        # write completed.  That way a crash won't leak partial state, given
+        # our database does try and be this conservative too.
+        begin
+          result.flush
+          result.respond_to?('fdatasync') ? result.fdatasync : result.fsync
+        rescue NotImplementedError
+          # This signals that neither fdatasync nor fsync could be used on
+          # this IO, which we can politely ignore, because what the heck can
+          # we do anyhow?
         end
+        FileUtils.mv(result, filename)
+      ensure
+        result.close
       end
 
       # Downloading was successful, so save our temporary directory for later

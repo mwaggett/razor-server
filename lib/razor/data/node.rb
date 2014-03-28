@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 module Razor::Data
   class DuplicateNodeError < RuntimeError
     attr_reader :hw_info, :nodes
@@ -8,9 +9,10 @@ module Razor::Data
     end
 
     def message
-      nodes_message =
-        node_ids.map { |h| "(name=#{h[:name]}, id=#{h[:id]})" }.join(",")
-      "Multiple nodes match hw_info #{hw_info}. Nodes: #{nodes_message}"
+      # TRANSLATORS: the name of the node, and the hardware ID of it.
+      template = _("(name=%{name}, id=%{id})")
+      message  = node_ids.map { |h| template % {name: h[:name], id: h[:id]} }.join(", ")
+      _("Multiple nodes match hw_info %{hw_info}. Nodes: %{nodes}") % {hw_info: hw_info, nodes: message}
     end
 
     def log_to_nodes!
@@ -29,6 +31,13 @@ module Razor::Data
   end
 
   class Node < Sequel::Model
+    # Since we generate the name in the database using a trigger, the
+    # auto-validation plugin sets up the wrong constraint checks.
+    # This updates it to fix that, by moving from "must be present" to
+    # "validate not null if explicitly supplied", which allows the database to
+    # assign the default if it is not present.
+    auto_validate_not_null_columns.delete(:name)
+    auto_validate_explicit_not_null_columns << :name
 
     #See the method schema_type_class() for some special considerations
     #regarding the use of serialization.
@@ -52,13 +61,6 @@ module Razor::Data
       need_eval_tags = changed_columns.include?(:metadata)
       super
       publish('eval_tags') if need_eval_tags
-    end
-
-    # Return a 'name'; for now this is a fixed generated string
-    # @todo lutter 2013-08-30: figure out a way for users to control how
-    # node names are set
-    def name
-      id.nil? ? nil : "node#{id}"
     end
 
     # Set the hardware info from a hash.
@@ -188,26 +190,27 @@ module Razor::Data
 
     def validate
       super
+
       unless hw_info.nil?
         # PGArray is not an Array, just behaves like one
         hw_info.is_a?(Sequel::Postgres::PGArray) or hw_info.is_a?(Array) or
-          errors.add(:hw_info, "must be an array")
+          errors.add(:hw_info, _("must be an array"))
         hw_info.each do |p|
           pair = p.split("=", 2)
           pair.size == 2 or
-            errors.add(:hw_info, "entry '#{p}' is not in the format 'key=value'")
+            errors.add(:hw_info, _("entry '%{raw}' is not in the format 'key=value'") % {raw: p})
           (pair[1].nil? or pair[1] == "") and
-            errors.add(:hw_info, "entry '#{p}' does not have a value")
+            errors.add(:hw_info, _("entry '%{raw}' does not have a value") % {raw: p})
           Razor::Config::HW_INFO_KEYS.include?(pair[0]) or
-            errors.add(:hw_info, "entry '#{p}' uses an unknown key #{pair[0]}")
+            errors.add(:hw_info, _("entry '%{raw}' uses an unknown key %{key}") % {raw: p, key: pair[0]})
           # @todo lutter 2013-09-03: we should do more checking, e.g. that
           # MAC addresses are sane
         end
       end
 
       if ipmi_hostname.nil?
-        ipmi_username and errors.add(:ipmi_username, 'you must also set an IPMI hostname')
-        ipmi_password and errors.add(:ipmi_password, 'you must also set an IPMI hostname')
+        ipmi_username and errors.add(:ipmi_username, _('you must also set an IPMI hostname'))
+        ipmi_password and errors.add(:ipmi_password, _('you must also set an IPMI hostname'))
       end
     end
 
@@ -234,14 +237,14 @@ module Razor::Data
       new_metadata = metadata
 
       if data['update']
-        data['update'].is_a? Hash or raise ArgumentError, 'update must be a hash'
+        data['update'].is_a? Hash or raise ArgumentError, _('update must be a hash')
         replace = (not [true, 'true'].include?(data['no_replace']))
         data['update'].each do |k,v|
           new_metadata[k] = v if replace or not new_metadata[k]
         end
       end
       if data['remove']
-        data['remove'].is_a? Array or raise ArgumentError, 'remove must be an array'
+        data['remove'].is_a? Array or raise ArgumentError, _('remove must be an array')
         data['remove'].each do |k,v|
           new_metadata.delete(k)
         end
@@ -280,12 +283,6 @@ module Razor::Data
       end
       save_changes
       { :action => action }
-    end
-
-    def self.find_by_name(name)
-      # We currently do not store the name in the DB; this just reverses
-      # what the +#name+ method does and looks up by id
-      self[$1] if name =~ /\Anode([0-9]+)\Z/
     end
 
     # Normalize the hardware info. Be very careful when you change this
@@ -330,7 +327,7 @@ module Razor::Data
       hw_match = hw_info.select do |p|
         Razor.config['match_nodes_on'].include?(p.split("=")[0])
       end
-      hw_match.empty? and raise ArgumentError, "Lookup was given #{params.keys}, none of which are configured as match criteria in match_nodes_on (#{Razor.config['match_nodes_on']})"
+      hw_match.empty? and raise ArgumentError, _("Lookup was given %{keys}, none of which are configured as match criteria in match_nodes_on (%{match_nodes_on})") % {keys: params.keys, match_nodes_on: Razor.config['match_nodes_on']}
       nodes = self.where(:hw_info.pg_array.overlaps(hw_match)).all
       if nodes.size == 0
         self.create(:hw_info => hw_info, :dhcp_mac => dhcp_mac)
