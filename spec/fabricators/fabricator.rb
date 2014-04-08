@@ -37,6 +37,7 @@ end
 Fabricator(:repo, :class_name => Razor::Data::Repo) do
   name      { Faker::Commerce.product_name + " #{Fabricate.sequence}" }
   iso_url   'file:///dev/null'
+  task_name { Fabricate(:task).name }
 end
 
 
@@ -56,7 +57,6 @@ end
 Fabricator(:policy, :class_name => Razor::Data::Policy) do
   name             { Faker::Commerce.product_name + " #{Fabricate.sequence}" }
   enabled          true
-  task_name        { Fabricate(:task).name }
   hostname_pattern 'host${id}.example.org'
   root_password    { Faker::Internet.password }
 
@@ -142,4 +142,9 @@ Fabricator(:bound_node, from: :node) do
     node.hostname = node.policy.hostname_pattern.gsub('${id}', node.id.to_s)
     node.save
   end
+end
+
+Fabricator(:command) do
+  command 'do-something'
+  status  'pending'
 end

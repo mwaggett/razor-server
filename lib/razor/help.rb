@@ -7,7 +7,9 @@ module Razor::Help
                              "Put the long text into the 'description' instead."
       @summary = value
     end
-    @summary
+    # If we don't have a summary yet, generate one from the first line of the
+    # description (if possible) and stash it away.
+    @summary ||= (description and description.split(/[.\n]/).first)
   end
 
   def description(value = nil)
@@ -16,16 +18,39 @@ module Razor::Help
     @description
   end
 
-  def examples(value = nil)
+  def example(value = nil)
     value = Razor::Help.scrub(value)
-    value.nil? or @examples = value
-    @examples
+    value.nil? or @example = value
+    @example
+  end
+
+  def returns(value = nil)
+    value = Razor::Help.scrub(value)
+    value.nil? or @returns = value
+    @returns
+  end
+
+
+  # Format the help text into something usable by the client.
+  # See the bottom of the file for the actual templates.
+  HelpTemplates = Hash.new {|_, name| raise ArgumentError, "unknown help format #{name}" }
+  def help(format = nil)
+    if format
+      HelpTemplates[format].result(binding)
+    else
+      # produce a new hash with the same output keys, but mutated output values
+      HelpTemplates.merge(HelpTemplates) {|_, erb| erb.result(binding) }
+    end
   end
 
   # A hook to allow us to check that documentation is correct without having
   # to pre-declare it all up front.
   def loading_complete
     super if defined?(super)
+  end
+
+  def included(where)
+    fail "Razor::Help should be extended on a class, not included in one"
   end
 
   # Strip indentation and trailing whitespace from embedded doc fragments.
@@ -65,7 +90,32 @@ module Razor::Help
     text.lines.map{|line|line.rstrip}.join("\n").rstrip
   end
 
-  def included(where)
-    fail "Razor::Help should be extended on a class, not included in one"
-  end
+  HelpTemplates['full'] = ERB.new(scrub(<<-ERB), nil, '%')
+% if summary.nil? and description.nil?
+Unfortunately, the `<%= name %>` command has not been documented.
+% else
+% # summary, description, example
+# SYNOPSIS
+<%= summary %>
+
+# DESCRIPTION
+<%= description %>
+%
+% # @todo danielp 2014-04-04: inject details built from the validation about
+% # the structure and form of the command.
+%
+% if returns
+
+# RETURNS
+<%= returns.gsub(/^/, '  ') %>
+% end
+%
+% if example
+
+# EXAMPLES
+<%= example.gsub(/^/, '  ') %>
+% end
+
+% end
+  ERB
 end

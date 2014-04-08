@@ -333,7 +333,8 @@ class Razor::App < Sinatra::Base
       # have to put the kernel and initrd into the microkernel/ directory
       # in their repo store manually for things to work.
       @repo = Razor::Data::Repo.new(:name => "microkernel",
-                                    :iso_url => "file:///dev/null")
+                                    :iso_url => "file:///dev/null",
+                                    :task_name => @task.name)
     end
     template = @task.boot_template(@node)
 
@@ -445,7 +446,7 @@ class Razor::App < Sinatra::Base
   #
   # @todo danielp 2013-06-26: this should be some sort of discovery, not a
   # hand-coded list, but ... it will do, for now.
-  COLLECTIONS = [:brokers, :repos, :tags, :policies, :nodes, :tasks]
+  COLLECTIONS = [:brokers, :repos, :tags, :policies, :nodes, :tasks, :commands]
 
   #
   # The main entry point for the public/management API
@@ -474,10 +475,14 @@ class Razor::App < Sinatra::Base
   end
 
   # Hook all our commands into the HTTP router.
-  Razor::Command.all.each do |command|
-    post command.http_path do
-      command.new.handle_http_post(self)
-    end
+  get '/api/commands/:name', provides: 'application/json' do
+    cmd = Razor::Command.find(name: params[:name]) or pass
+    cmd.new.handle_http_get(self)
+  end
+
+  post '/api/commands/:name' do
+    cmd = Razor::Command.find(name: params[:name]) or pass
+    cmd.new.handle_http_post(self)
   end
 
 
@@ -567,6 +572,22 @@ class Razor::App < Sinatra::Base
     repo = Razor::Data::Repo[:name => params[:name]] or
       error 404, :error => _("no repo matched name=%{name}") % {name: params[:name]}
     repo_hash(repo).to_json
+  end
+
+  get '/api/collections/commands' do
+    collection_view Razor::Data::Command.order(:submitted_at).reverse,
+      'commands'
+  end
+
+  get '/api/collections/commands/:id' do
+    # params[:id] better look like an integer. Without this check, passing
+    # in 'foo' as the id will produce a 400 error (and internal stacktrace)
+    # rather than the expected 404
+    params[:id].to_i.to_s == params[:id] or
+      error 404, :error => _("no such command")
+    cmd = Razor::Data::Command[params[:id]] or
+      error 404, :error => _("no such command")
+    command_hash(cmd).to_json
   end
 
   get '/api/collections/nodes' do
