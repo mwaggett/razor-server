@@ -39,8 +39,11 @@ files:
   - NEWS.md
   - Rakefile
   - README.md
+  - shiro.ini
   - tasks
   - torquebox.rb
   - vendor
   - .bundle
+  - 'locales/*.po'
+  - 'locales/*.pot'
 tar_excludes: "brokers/chef.broker"

@@ -13,28 +13,40 @@ class Razor::Validation::ArraySchema
     @checks.each {|check| check.finalize(self) }
   end
 
-  def validate!(data)
+  def validate!(data, path)
     # Ensure that we have the correct base data type, since nothing else will
     # work if we don't.
     data.is_a?(Array) or
-      raise Razor::ValidationFailure, _('expected %{expected} but got %{actual}') %
-      {expected: ruby_type_to_json(Array), actual: ruby_type_to_json(data)}
+      raise Razor::ValidationFailure, _('%{this} should be an array, but got %{actual}') %
+      {this: path, actual: ruby_type_to_json(data)}
 
     # Validate that all our elements match our object schema, if we have one.
     data.each_with_index do |value, index|
       @checks.each do |check|
-        check.validate!(value, index)
+        check.validate!(value, path, index)
       end
     end
   end
 
-  def object(index = nil, checks = {}, &block)
+  # This can be called as any of:
+  # - Index/range plus checks Hash
+  # - Index/range only
+  # - Checks Hash only
+  def object(index_or_checks = 0..Float::INFINITY, checks_or_nil = {}, &block)
     block.is_a?(Proc)  or raise ArgumentError, "an object must have a block to define it"
     schema = Razor::Validation::HashSchema.build(@command, block)
-    @checks << Razor::Validation::ArrayAttribute.new(index, checks.merge(schema: schema))
+    @checks << Razor::Validation::ArrayAttribute.
+      new(index_or_checks, checks_or_nil.merge(type: Hash, schema: schema))
   end
 
+  def element(index_or_checks = 0..Float::INFINITY, checks_or_nil = {})
+    @checks << Razor::Validation::ArrayAttribute.new(index_or_checks, checks_or_nil)
+  end
 
+  # This alias may be helpful for readability in cases where no index/range is provided.
+  # That would indicate that the restriction applies to all elements, so you could achieve
+  # the more readable: `elements type: String`.
+  alias_method 'elements', 'element'
 
   ########################################################################
   # Infrastructure for creating the a nested schema.
@@ -42,13 +54,10 @@ class Razor::Validation::ArraySchema
     extend Forwardable
 
     def initialize(name)
-      @name = name
+      @schema = Razor::Validation::ArraySchema.new(name)
     end
 
-    def schema
-      @schema ||= Razor::Validation::ArraySchema.new(@name)
-    end
-
+    attr_reader    'schema'
     def_delegators 'schema', *Razor::Validation::ArraySchema.public_instance_methods(false)
   end
 

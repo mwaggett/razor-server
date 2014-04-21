@@ -27,25 +27,32 @@ class Razor::Validation::HashAttribute
     Array(@also).each do |attr|
       schema.attribute(attr) or raise ArgumentError, "additionally required attribute #{attr} by #{@name} is not defined in the schema"
     end
+
+    if @size
+      @type and @type.all? {|t| [String, Hash, Array].member? t[:type] } or
+        raise ArgumentError, "a type, from String, Hash, or Array, must be specified if you want to check the size of the #{@name} attribute"
+    end
   end
 
-  def validate!(data, name = nil)
-    name ||= @name
+  def expand(path, name)
+    [path, name].compact.join('.')
+  end
 
+  def validate!(data, path, name = @name)
     # if the key is not present, fail if required, otherwise we are done validating.
     unless data.has_key?(name)
       @required and
-        raise Razor::ValidationFailure, _("required attribute %{name} is missing") % {name: name}
+        raise Razor::ValidationFailure, _("%{this} is a required attribute, but it is not present") % {this: expand(path, name)}
       return true
     end
 
     @exclude and @exclude.each do |what|
       data.has_key?(what) and
-        raise Razor::ValidationFailure, _("if %{name} is present, %{exclude} must not be present") % {name: name, exclude: what}
+        raise Razor::ValidationFailure, _("if %{this} is present, %{exclude} must not be present") % {this: expand(path, name), exclude: expand(path, what)}
 
     @also and @also.each do |what|
         data.has_key?(what) or
-          raise Razor::ValidationFailure, _("if %{name} is present, %{also} must also be present") % {name: name, also: @also.join(', ')}
+          raise Razor::ValidationFailure, _("if %{this} is present, %{also} must also be present") % {this: expand(path, name), also: @also.map{|x| expand(path, x)}.join(', ')}
       end
     end
 
@@ -61,33 +68,73 @@ class Razor::Validation::HashAttribute
         begin
           check[:validate] and check[:validate].call(value)
         rescue => e
-          raise Razor::ValidationFailure, _("attribute %{name} fails type checking for %{type}: %{error}") % {name: name, type: ruby_type_to_json(check[:type]), error: e.to_s}
+          raise Razor::ValidationFailure, _("%{this} should be a %{type}, but failed validation: %{error}") % {this: expand(path, name), type: ruby_type_to_json(check[:type]), error: e.to_s}
         end
 
         # If we got here we passed all the checks, and have a match, so we are good.
         break true
       end or raise Razor::ValidationFailure, n_(
-        "attribute %{name} has wrong type %{actual} where %{expected} was expected",
-        "attribute %{name} has wrong type %{actual} where one of %{expected} was expected",
+        "%{this} should be a %{expected}, but was actually a %{actual}",
+        "%{this} should be one of %{expected}, but was actually a %{actual}",
         Array(@type).count) % {
-        name:     name,
+        this:     expand(path, name),
         actual:   ruby_type_to_json(value),
         expected: Array(@type).map {|x| ruby_type_to_json(x[:type]) }.join(', ')}
     end
 
     if @references
       found = @references.find(@refname => value) rescue nil
-      found or raise Razor::ValidationFailure.new(_("attribute %{name} must refer to an existing instance") % {name: name}, 404)
+      found or raise Razor::ValidationFailure.new(_("%{this} must be the %{match} of an existing %{target}, but is '%{value}'") % {this: expand(path, name), match: @refname, target: @references.friendly_name, value: value}, 404)
     end
 
     if @one_of
       @one_of.any? {|match| value == match } or
-        raise Razor::ValidationFailure, _("attribute %{name} must refer to one of %{valid}") % {name: name, valid: @one_of.map {|x| x.nil? ? 'null' : x }.join(', ')}
+        raise Razor::ValidationFailure, _("%{this} must refer to one of %{valid}") % {this: expand(path, name), valid: @one_of.map {|x| x.nil? ? 'null' : x }.join(', ')}
+    end
+
+    if @size and not @size.include?(value.size)
+      args = {
+        this: expand(path, name),
+        size: value.size,
+        min:  Float(@size.min).infinite? ? nil : @size.min,
+        max:  Float(@size.max).infinite? ? nil : @size.max
+      }
+
+      case value
+      when String
+        if args[:min] and args[:max]
+          msg = n_(
+            '%{this} must be between %{min} and %{max} characters in length, but is %{size} character long',
+            '%{this} must be between %{min} and %{max} characters in length, but is %{size} characters long',
+            value.size)
+        elsif args[:min]
+          msg = n_(
+            '%{this} must be at least %{min} characters in length, but is only %{size} character long',
+            '%{this} must be at least %{min} characters in length, but is only %{size} characters long',
+            value.size)
+        else
+          msg = n_(
+            '%{this} must be at most %{max} characters in length, but is actually %{size} character long',
+            '%{this} must be at most %{max} characters in length, but is actually %{size} characters long',
+            zalue.size)
+        end
+
+      else
+        if args[:min] and args[:max]
+          msg = _('%{this} must have between %{min} and %{max} entries, but actually contains %{size}')
+        elsif args[:min]
+          msg = _('%{this} must have at least %{min} entries, only contains %{size}')
+        else
+          msg = _('%{this} must have at most %{max} entries, but actually contains %{size}')
+        end
+      end
+
+      raise Razor::ValidationFailure, msg % args
     end
 
     # If we have a nested schema, just throw the value into it to see if it
     # is valid.  That handles the nesting case nicely.
-    if @nested_schema then @nested_schema.validate!(value) end
+    @nested_schema and @nested_schema.validate!(value, expand(path, name))
 
     return true
   end
@@ -142,7 +189,7 @@ class Razor::Validation::HashAttribute
     end
 
     @references = const
-    @refname    = (key or @name).to_sym
+    @refname    = (key or :name).to_sym
   end
 
   ValidTypesForOneOf = [String, Numeric, TrueClass, FalseClass, NilClass]
@@ -165,5 +212,14 @@ class Razor::Validation::HashAttribute
       schema.is_a?(Razor::Validation::ArraySchema) or
       raise ArgumentError, "schema must be a schema instance; use 'object' to define this"
     @nested_schema = schema
+  end
+
+  def size(range)
+    range.is_a?(Range) or
+      raise ArgumentError, "size checks take a range; use 0..Float::INFINITY as appropriate"
+    range.exclude_end? and
+      raise ArgumentError, "please just use an inclusive range for your size checks"
+
+    @size = range
   end
 end

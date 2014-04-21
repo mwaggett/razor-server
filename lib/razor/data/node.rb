@@ -63,6 +63,16 @@ module Razor::Data
       publish('eval_tags') if need_eval_tags
     end
 
+    def before_create
+      # Support users configuring that we mark all newly discovered nodes as
+      # "installed" already, despite having no policy.
+      if Razor.config['protect_new_nodes']
+        self.installed    = true
+        self.installed_at = Time.now
+      end
+      super
+    end
+
     # Set the hardware info from a hash.
     def hw_hash=(hw_hash)
       self.hw_info = self.class.canonicalize_hw_info(hw_hash)
@@ -144,6 +154,15 @@ module Razor::Data
       add_node_log_entry(:entry => entry)
     end
 
+    def installed=(value)
+      # @todo danielp 2014-04-15: Unfortunately, we can't store false into the
+      # database without also storing a time, but time should be nil if we are
+      # not installed.  Should fix that, one day, I suspect.
+      super(value ? value : nil)
+      self.installed_at = if value then DateTime.now else nil end
+      return value
+    end
+
     def bind(policy)
       self.policy = policy
       self.boot_count = 1
@@ -159,7 +178,6 @@ module Razor::Data
       #    require a flag to remember whether we've already booted into a
       #    policy or not
       self.installed = nil
-      self.installed_at = nil
       self.root_password = policy.root_password
       self.hostname = policy.hostname_pattern.gsub(/\$\{\s*id\s*\}/, id.to_s)
 
@@ -355,7 +373,6 @@ module Razor::Data
       node.boot_count += 1
       if name == "finished" and node.policy
         node.installed = node.policy.name
-        node.installed_at = DateTime.now
       end
       node.save
     end

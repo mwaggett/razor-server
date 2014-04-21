@@ -2,6 +2,9 @@
 
 ## 0.15.0 - 2014-??-??
 
++ `protect_new_nodes` configuration setting will mark all
+   nodes to be marked as "installed" when first discovered, causing them
+   to boot locally until explicitly reinstalled.
 + incompatible changes
   + the way that tasks and templates are stored on disk has changed.
     The metadata file is changed from `tasks/{name}.yaml` to
@@ -23,6 +26,8 @@
   + `create-repo` now requires a `task` argument. The argument must have the form:
     { "name" => "TASK_NAME" } # Where TASK_NAME is the name of an existing task, whether
     that be stock or custom.
++ `create-policy`, `create-repo`, and `move-policy` now accept the short reference form,
+  e.g. "task": "TASK_NAME" instead of "task": { "name" => "TASK_NAME" }
 
 ## 0.13.0 - 2014-01-21
 

@@ -1,16 +1,17 @@
 # -*- encoding: utf-8 -*-
 class Razor::Validation::ArrayAttribute
-  def initialize(index, checks = {})
+  # Method optionally receives a Hash with keys:
+  # - index: Can be an Integer, Range, or Nil (all, default), specifying to what the attribute applies.
+  # - checks: Contains all checks applied to the attribute.
+  def initialize(index_or_checks = 0..Float::INFINITY, checks_or_nil = {})
+    index, checks =
+        if index_or_checks.is_a?(Hash)
+          checks_or_nil.nil? or raise TypeError, 'index must be an integer or a range of integers'
+          [0..Float::INFINITY, index_or_checks]
+        else
+          [(index_or_checks or 0..Float::INFINITY), (checks_or_nil or {})]
+        end
     case index
-    when Hash
-      # If we got only a hash, and the default (empty) value for what to
-      # check, then the user has said "entry ${checks}", and implies that they
-      # want this to apply to all array elements.
-      checks.empty? or raise TypeError, "index must be an integer or a range of integers"
-      @range = 0 .. Float::INFINITY
-      checks = index
-    when nil
-      @range = 0 .. Float::INFINITY
     when Integer
       index >= 0 or raise ArgumentError, "index #{index} must be at or above zero"
       @range = index .. index
@@ -21,7 +22,7 @@ class Razor::Validation::ArrayAttribute
 
       @range = index
     else
-      raise TypeError, "index must be an integer or a range of integers"
+      raise TypeError, "index must be an integer or a range of integers, got #{index.class.inspect}"
     end
 
     checks.is_a?(Hash) or raise TypeError, "must be followed by a hash"
@@ -34,7 +35,11 @@ class Razor::Validation::ArrayAttribute
   def finalize(schema)
   end
 
-  def validate!(value, index)
+  def expand(path, index)
+    "#{path}[#{index}]"
+  end
+
+  def validate!(value, path, index)
     # If that is not in our range, we just return to ignore it.
     return unless @range.include? index
 
@@ -48,23 +53,28 @@ class Razor::Validation::ArrayAttribute
         begin
           check[:validate] and check[:validate].call(value)
         rescue => e
-          raise Razor::ValidationFailure, _("attribute at index %{index} fails type checking for %{type}: %{error}") % {index: index, type: ruby_type_to_json(check[:type]), error: e.to_s}
+          raise Razor::ValidationFailure, _("%{this} should be a %{type}, but failed validation: %{error}") % {this: expand(path, index), type: ruby_type_to_json(check[:type]), error: e.to_s}
         end
 
         # If we got here we passed all the checks, and have a match, so we are good.
         break true
       end or raise Razor::ValidationFailure, n_(
-        "attribute at position %{index} has wrong type %{actual} where %{expected} was expected",
-        "attribute at position %{index} has wrong type %{actual} where one of %{expected} was expected",
+        "%{this} should be a %{expected}, but was actually a %{actual}",
+        "%{this} should be one of %{expected}, but was actually a %{actual}",
         Array(@type).count) % {
-        index:     index,
+        this:     expand(path, index),
         actual:   ruby_type_to_json(value),
         expected: Array(@type).map {|x| ruby_type_to_json(x[:type]) }.join(', ')}
     end
 
+    if @references
+      found = @references.find(@refname => value) rescue nil
+      found or raise Razor::ValidationFailure.new(_("%{this} must be the %{match} of an existing %{target}, but is '%{value}'") % {this: expand(path, index), match: @refname, target: @references.friendly_name, value: value}, 404)
+    end
+
     # If we have a nested schema, just throw the value into it to see if it
     # is valid.  That handles the nesting case nicely.
-    if @nested_schema then @nested_schema.validate!(value) end
+    if @nested_schema then @nested_schema.validate!(value, expand(path, index)) end
 
     return true
   end
@@ -96,5 +106,16 @@ class Razor::Validation::ArrayAttribute
       schema.is_a?(Razor::Validation::ArraySchema) or
       raise ArgumentError, "schema must be a schema instance; use 'object' to define this"
     @nested_schema = schema
+  end
+
+  def references(what)
+    const, key = what
+
+    unless const.is_a?(Class) and const.respond_to?('find')
+      raise ArgumentError, "attribute references must be a class that respond to find(key: value)"
+    end
+
+    @references = const
+    @refname    = (key or :name).to_sym
   end
 end

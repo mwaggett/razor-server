@@ -42,38 +42,38 @@ describe Razor::Validation::HashAttribute do
 
     it "should fail if the attribute is required but not present" do
       attr.required(true)
-      expect { attr.validate!({}) }.
-        to raise_error(/required attribute attr is missing/)
+      expect { attr.validate!({}, nil) }.
+        to raise_error(/attr is a required attribute, but it is not present/)
     end
 
     it "should return true if the attribute is not required and not present" do
       attr.required(false)
-      attr.validate!({}).should be_true
+      attr.validate!({}, nil).should be_true
     end
 
     it "should fail if it excludes another attribute that is present" do
       attr.exclude('fail')
-      expect { attr.validate!('attr' => true, 'fail' => true) }.
+      expect { attr.validate!({'attr' => true, 'fail' => true}, nil) }.
         to raise_error(/if attr is present, fail must not be present/)
     end
 
     [{}, [], 1, 1.1, true, false, nil].each do |input|
       it "should fail if type is specified (String), and not matched (#{input.inspect})" do
         attr.type(String)
-        expect { attr.validate!({'attr' => input}) }.
-          to raise_error(/attribute attr has wrong type .+ where string was expected/)
+        expect { attr.validate!({'attr' => input}, nil) }.
+          to raise_error(/attr should be a string, but was actually a .+/)
       end
     end
 
     it "should fail if the type is URI, and it has a bad URI passed" do
       attr.type(URI)
-      expect { attr.validate!({'attr' => 'http://'}) }.
+      expect { attr.validate!({'attr' => 'http://'}, nil) }.
         to raise_error(/bad URI/)
     end
 
     it "should fail if value's key is blank" do
       attr.type(Hash)
-      expect { attr.validate!({'attr' => {'' => 'abc'}}) }.
+      expect { attr.validate!({'attr' => {'' => 'abc'}}, nil) }.
           to raise_error(/blank hash key/)
     end
 
@@ -83,20 +83,26 @@ describe Razor::Validation::HashAttribute do
       let :attr do Razor::Validation::HashAttribute.new('id', {}) end
 
       before :each do
-        attr.references(Razor::Data::Node)
+        attr.references([Razor::Data::Node, :id])
         attr.required(true)
       end
 
+      it "should default to using name as the reference" do
+        attr.references(Razor::Data::Node)
+        expect { attr.validate!({'id' => node.id}, nil) }.
+            to raise_error(/id must be the name of an existing node, but is '#{node.id}'/)
+      end
+
       it "should fail if the referenced instance does not exist" do
-        expect { attr.validate!({'id' => node.id + 12}) }.
-          to raise_error(/attribute id must refer to an existing instance/)
+        expect { attr.validate!({'id' => node.id + 12}, nil) }.
+          to raise_error(/id must be the id of an existing node, but is '#{node.id + 12}'/)
       end
 
       it "should have a 404 status on the error when the instance does not exist" do
         test_code_ran = false
 
         begin
-          attr.validate!({'id' => node.id + 12})
+          attr.validate!({'id' => node.id + 12}, nil)
         rescue Razor::ValidationFailure => e
           e.status.should == 404
           test_code_ran = true
@@ -109,7 +115,92 @@ describe Razor::Validation::HashAttribute do
       end
 
       it "should succeed if the referenced instance does exist" do
-        attr.validate!({'id' => node.id}).should be_true
+        attr.validate!({'id' => node.id}, nil).should be_true
+      end
+    end
+
+    context "size" do
+      context "strings" do
+        before :each do
+          attr.type(String)
+          attr.size(2..4)
+        end
+
+        it "should reject an empty string" do
+          expect { attr.validate!({'attr' => ''}, nil) }.
+            to raise_error Razor::ValidationFailure, 'attr must be between 2 and 4 characters in length, but is 0 characters long'
+        end
+
+        it "should reject a short string" do
+          expect { attr.validate!({'attr' => '1'}, nil) }.
+            to raise_error Razor::ValidationFailure, 'attr must be between 2 and 4 characters in length, but is 1 character long'
+        end
+
+        it "should reject a long string" do
+          expect { attr.validate!({'attr' => '12345'}, nil) }.
+            to raise_error Razor::ValidationFailure, 'attr must be between 2 and 4 characters in length, but is 5 characters long'
+        end
+
+        it "should include the start of the range" do
+          attr.validate!({'attr' => '12'}, nil).should be_true
+        end
+
+        it "should include the end of the range" do
+          attr.validate!({'attr' => '1234'}, nil).should be_true
+        end
+
+        it "should work in unicode characters, not bytes" do
+          expect { attr.validate!({'attr' => "\u{2603}"}, nil) }.to raise_error Razor::ValidationFailure, 'attr must be between 2 and 4 characters in length, but is 1 character long'
+          expect { attr.validate!({'attr' => "\u{2603}\u{2603}\u{2603}\u{2603}\u{2603}"}, nil)  }.to raise_error Razor::ValidationFailure, 'attr must be between 2 and 4 characters in length, but is 5 characters long'
+
+          attr.validate!({'attr' => "\u{2603}\u{2603}"}, nil).should be_true
+          attr.validate!({'attr' => "\u{2603}\u{2603}\u{2603}\u{2603}"}, nil).should be_true
+        end
+      end
+
+      context "arrays" do
+        before :each do
+          attr.type(Array)
+          attr.size(2..4)
+        end
+
+        it "should reject an empty array" do
+          expect { attr.validate!({'attr' => []}, nil) }.
+            to raise_error Razor::ValidationFailure, 'attr must have between 2 and 4 entries, but actually contains 0'
+        end
+
+        it "should reject a short array" do
+          expect { attr.validate!({'attr' => [1]}, nil) }.
+            to raise_error Razor::ValidationFailure, 'attr must have between 2 and 4 entries, but actually contains 1'
+        end
+
+        it "should reject a long array" do
+          expect { attr.validate!({'attr' => %w[1 2 3 4 5]}, nil) }.
+            to raise_error Razor::ValidationFailure, 'attr must have between 2 and 4 entries, but actually contains 5'
+        end
+      end
+
+      context "objects (maps)" do
+        before :each do
+          attr.type(Hash)
+          attr.size(2..4)
+        end
+
+        it "should reject an empty object" do
+          expect { attr.validate!({'attr' => {}}, nil) }.
+            to raise_error Razor::ValidationFailure, 'attr must have between 2 and 4 entries, but actually contains 0'
+        end
+
+        it "should reject a short object" do
+          expect { attr.validate!({'attr' => {'one' => 1}}, nil) }.
+            to raise_error Razor::ValidationFailure, 'attr must have between 2 and 4 entries, but actually contains 1'
+        end
+
+        it "should reject a long object" do
+          data = {'one' => 1, 'two' => 2, 'three' => 3, 'four' => 4, 'five' => 5}
+          expect { attr.validate!({'attr' => data}, nil) }.
+            to raise_error Razor::ValidationFailure, 'attr must have between 2 and 4 entries, but actually contains 5'
+        end
       end
     end
   end
@@ -167,6 +258,43 @@ describe Razor::Validation::HashAttribute do
 
     it "should accept a Sequel::Model derived class" do
       expect { attr.references(Razor::Data::Node) }.not_to raise_error
+    end
+  end
+
+  context "size" do
+    let(:schema) do
+      Razor::Validation::HashSchema.new('test').tap do |schema|
+        schema.attr('attr')
+      end
+    end
+
+    subject(:attr) { schema.attribute('attr') }
+
+    it "should fail if no type is required" do
+      expect do
+        attr.size(1..10)
+        attr.finalize(schema)
+      end.to raise_error "a type, from String, Hash, or Array, must be specified if you want to check the size of the attr attribute"
+    end
+
+    [String, Array, Hash].each do |type|
+      it "should work with type #{type}" do
+        expect do
+          attr.type(type)
+          attr.size(1..10)
+          attr.finalize(schema)
+        end.not_to raise_error
+      end
+    end
+
+    [Numeric, Float, :bool].each do |type|
+      it "should fail with type #{type}" do
+        expect do
+          attr.type(type)
+          attr.size(1..10)
+          attr.finalize(schema)
+        end.to raise_error "a type, from String, Hash, or Array, must be specified if you want to check the size of the attr attribute"
+      end
     end
   end
 end

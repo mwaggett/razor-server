@@ -27,6 +27,26 @@ class Razor::App < Sinatra::Base
     set :show_exceptions, false
   end
 
+  MigrationNeeded = _(
+"Hey.  Your database migrations are not current!  Without them being at the
+exact expected version you can expect all sorts of random looking failures.
+
+You should rerun the migrations now.  That will fix things and stop this
+error from getting in your way.  That is done with the `razor-admin` command,
+and requires full control over the database (eg: add and remove tables):
+
+    ] razor-admin migrate-database
+")
+
+  before do
+    # Verify that our migrations are current and functional, and if not,
+    # return a clear error message to the user.
+    unless Razor.database_is_current?
+      content_type 'text/plain'
+      halt [500, MigrationNeeded]
+    end
+  end
+
   before do
     # We serve static files from /svc/repo and will therefore let that
     # handler determine the most appropriate content type
@@ -195,20 +215,21 @@ class Razor::App < Sinatra::Base
 
   # Error handlers for node API
   error Razor::TemplateNotFoundError do
-    status [404, env["sinatra.error"].message]
+    status [404, {error: env["sinatra.error"].to_s}.to_json]
   end
 
   error Razor::Util::ConfigAccessProhibited do
-    status [500, env["sinatra.error"].message]
+    status [500, {error: env["sinatra.error"].to_s}.to_json]
   end
 
   error org.apache.shiro.authz.UnauthorizedException do
-    status [403, env["sinatra.error"].to_s]
+    status [403, {error: env["sinatra.error"].to_s}.to_json]
   end
 
   [ArgumentError, TypeError, Sequel::ValidationFailed, Sequel::Error].each do |fault|
     error fault do
-      status [400, env["sinatra.error"].to_s]
+      e = env["sinatra.error"]
+      status [400, {error: e.to_s}.to_json]
     end
   end
 
