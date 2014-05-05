@@ -29,7 +29,7 @@ describe "create policy command" do
         :task          => {"name" => "some_os"},
         :broker        => { "name" => broker.name },
         :hostname      => "host${id}.example.com",
-        :root_password => "geheim",
+        'root-password' => "geheim",
         :tags          => [ { "name" => tag1.name } ]
       }
     end
@@ -81,16 +81,63 @@ describe "create policy command" do
       last_response.status.should == 422
     end
 
+    it "should fail if the root password is missing" do
+      policy_hash.delete('root-password')
+      create_policy
+      last_response.status.should == 422
+    end
+
+    it "should conform root password's legacy syntax" do
+      policy_hash['root_password'] = policy_hash.delete('root-password')
+      create_policy
+      last_response.status.should == 202
+    end
+
     it "should create a policy in the database" do
       create_policy
 
       Razor::Data::Policy[:name => policy_hash[:name]].should be_an_instance_of Razor::Data::Policy
     end
 
+    it "should default to enabling the policy" do
+      create_policy
+
+      Razor::Data::Policy[:name => policy_hash[:name]].enabled.should be_true
+    end
+
+    it "should allow creating a disabled policy" do
+      policy_hash[:enabled] = false
+
+      create_policy
+
+      Razor::Data::Policy[:name => policy_hash[:name]].enabled.should be_false
+    end
+
+    it "should allow creating a policy with max count" do
+      policy_hash['max-count'] = 10
+
+      create_policy
+
+      Razor::Data::Policy[:name => policy_hash[:name]].max_count.should == 10
+    end
+
     it "should fail with the wrong datatype for repo" do
       policy_hash[:repo] = { }
       create_policy
       last_response.json['error'].should =~ /repo\.name is a required attribute, but it is not present/
+    end
+
+    it "should fail with the wrong datatype for max-count" do
+      policy_hash['max-count'] = { }
+      create_policy
+      last_response.json['error'].should =~ /max-count should be a number, but was actually a object/
+    end
+
+
+    it "should conform max count's legacy syntax" do
+      policy_hash['max_count'] = 10
+      create_policy
+      last_response.status.should == 202
     end
 
     it "should fail with the wrong datatype for task" do
