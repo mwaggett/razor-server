@@ -44,7 +44,6 @@ describe "create policy command" do
       create_policy
 
       last_response.status.should == 202
-      last_response.json?.should be_true
       last_response.json.keys.should =~ %w[id name spec]
 
       last_response.json["id"].should =~ %r'/api/collections/policies/test%20policy\Z'
@@ -85,6 +84,20 @@ describe "create policy command" do
       policy_hash.delete('root-password')
       create_policy
       last_response.status.should == 422
+    end
+
+    it "should fail without repo" do
+      policy_hash.delete(:repo)
+      create_policy
+      last_response.status.should == 422
+      last_response.json['error'].should == "repo is a required attribute, but it is not present"
+    end
+
+    it "should fail without broker" do
+      policy_hash.delete(:broker)
+      create_policy
+      last_response.status.should == 422
+      last_response.json['error'].should == "broker is a required attribute, but it is not present"
     end
 
     it "should conform root password's legacy syntax" do
@@ -138,6 +151,29 @@ describe "create policy command" do
       policy_hash['max_count'] = 10
       create_policy
       last_response.status.should == 202
+    end
+
+    it "should conform tag array into tags" do
+      tag2 = Fabricate(:tag)
+      policy_hash['tag'] = [tag2.name]
+      create_policy
+      last_response.status.should == 202
+      ([tag1, tag2] & Razor::Data::Policy[:name => policy_hash[:name]].tags).should == [tag1, tag2]
+    end
+
+    it "should conform tag string into tags" do
+      tag2 = Fabricate(:tag)
+      policy_hash['tag'] = tag2.name
+      create_policy
+      last_response.status.should == 202
+      ([tag1, tag2] & Razor::Data::Policy[:name => policy_hash[:name]].tags).should == [tag1, tag2]
+    end
+
+    it "should fail with the wrong datatype for tag" do
+      policy_hash['tag'] = 123
+      create_policy
+      last_response.json['error'].should == "tags[1] should be a object, but was actually a number"
+      last_response.status.should == 422
     end
 
     it "should fail with the wrong datatype for task" do

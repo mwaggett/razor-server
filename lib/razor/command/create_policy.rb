@@ -94,7 +94,7 @@ A sample policy installing CentOS 6.4:
     end
   end
 
-  object 'repo', help: _(<<-HELP) do
+  object 'repo', required: true, help: _(<<-HELP) do
     The repository containing the OS to be installed by this policy.  This
     should match the task assigned, or bad things will happen.
   HELP
@@ -102,7 +102,7 @@ A sample policy installing CentOS 6.4:
                  help: _('The name of the repository to use.')
   end
 
-  object 'broker', help: _(<<-HELP) do
+  object 'broker', required: true, help: _(<<-HELP) do
     The broker to use when the node is fully installed, and is ready to hand
     off to the final configuration management system.  If you have no ongoing
     configuration management, the supplied `noop` broker will do nothing.
@@ -146,8 +146,10 @@ A sample policy installing CentOS 6.4:
 
     data["max_count"] = data.delete("max-count") if data["max-count"]
     data["root_password"] = data.delete("root-password") if data["root-password"]
+
     # Create the policy
-    policy = Razor::Data::Policy.new(data).save
+    policy = Razor::Data::Policy.import(data).first
+
     tags.each { |t| policy.add_tag(t) }
     position and policy.move(position, neighbor)
     policy.save
@@ -159,6 +161,9 @@ A sample policy installing CentOS 6.4:
     data.tap do |_|
       data['before'] = { 'name' => data['before'] } if data['before'].is_a?(String)
       data['after'] = { 'name' => data['after'] } if data['after'].is_a?(String)
+      data['tag'] = Array[data['tag']] unless data['tag'].nil? or data['tag'].is_a?(Array)
+      data['tags'] = [] if data['tags'].nil?
+      data['tags'] = (data['tags'] + data.delete('tag')).uniq if data['tags'].is_a?(Array) and data['tag'].is_a?(Array)
       data['tags'] = data['tags'].map { |item| item.is_a?(String) ? { 'name' => item } : item } if data['tags'].is_a?(Array)
       data['repo'] = { 'name' => data['repo'] } if data['repo'].is_a?(String)
       data['broker'] = { 'name' => data['broker'] } if data['broker'].is_a?(String)

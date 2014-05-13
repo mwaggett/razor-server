@@ -20,7 +20,6 @@ Define the RedHat task included with Razor using this command:
     {
       "name":        "redhat6",
       "os":          "Red Hat Enterprise Linux",
-      "os_version":  "6",
       "description": "A basic installer for RHEL6",
       "boot_seq": {
         "1":       "boot_install",
@@ -68,6 +67,6 @@ EOT
         each { |k| boot_seq[k.to_i] = boot_seq.delete(k) }
     end
 
-    Razor::Data::Task.new(data).save.freeze
+    Razor::Data::Task.import(data).first
   end
 end
