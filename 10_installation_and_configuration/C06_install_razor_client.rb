@@ -1,5 +1,4 @@
 # -*- encoding: utf-8 -*-
-
 confine :to, :platform => 'el-6'
 confine :except, :roles => %w{master dashboard database}
 
