@@ -13,6 +13,12 @@ describe "move policy command" do
     @p2 = Fabricate(:policy, :name => 'second', :rule_number => 2)
     @p3 = Fabricate(:policy, :name => 'third', :rule_number => 3)
   end
+  let(:command_hash) do
+    {
+        "name" => @p1.name,
+        "after" => @p2.name
+    }
+  end
 
   def move_policy(what, where, other)
     input = {}
@@ -26,6 +32,10 @@ describe "move policy command" do
     last_response.json['error'].should be_nil
     last_response.status.should == 202
     Policy.all.map { |p| p.id }.should == list.map { |x| x.id }
+  end
+
+  describe Razor::Command::MovePolicy do
+    it_behaves_like "a command"
   end
 
   describe "spec" do
@@ -53,7 +63,7 @@ describe "move policy command" do
           :name => @p1.name,
           :before => { },
       }
-      last_response.json['error'].should =~ /before.name is a required attribute, but it is not present/
+      last_response.json['error'].should == 'before should be a string, but was actually a object'
       last_response.status.should == 422
     end
 
@@ -62,7 +72,7 @@ describe "move policy command" do
           :name => @p1.name,
           :after => { },
       }
-      last_response.json['error'].should =~ /after.name is a required attribute, but it is not present/
+      last_response.json['error'].should == 'after should be a string, but was actually a object'
       last_response.status.should == 422
     end
 
@@ -97,13 +107,13 @@ describe "move policy command" do
     check_order @p1, @p3, @p2
   end
 
-  it "should conform to allow the shortcut in 'before' spec" do
+  it "should conform to allow the long form in 'before' spec" do
     input = {'name' => @p3.name, 'before' => @p1.name }
     command 'move-policy', input
     check_order @p3, @p1, @p2
   end
 
-  it "should conform to allow the shortcut in 'after' spec" do
+  it "should conform to allow the long form in 'after' spec" do
     input = {'name' => @p1.name, 'after' => @p3.name }
     command 'move-policy', input
     check_order @p2, @p3, @p1

@@ -10,6 +10,14 @@ describe "update node metadata command" do
   let(:node) do
     Fabricate(:node)
   end
+  let(:command_hash) do
+    {
+        'node' => node.name,
+        'value' => 'v1',
+        'key' => 'k1',
+        'no-replace' => 'true'
+    }
+  end
 
   before :each do
     header 'content-type', 'application/json'
@@ -20,46 +28,33 @@ describe "update node metadata command" do
     command 'update-node-metadata', data
   end
 
-  it "should require a node" do
-    data = { 'key' => 'k1', 'value' => 'v1' }
-    update_metadata(data)
-    last_response.status.should == 422
-    last_response.json["error"].should =~
-      /node is a required attribute, but it is not present/
+  describe Razor::Command::UpdateNodeMetadata do
+    it_behaves_like "a command"
   end
 
-  it "should require a key" do
-    data = { 'node' => "node#{node.id}", 'value' => 'v1' }
+  it "should require no-replace to equal true" do
+    data = { 'node' => "node#{node.id}", 'key' => 'k1', 'value' => 'v1', 'no-replace' => 'not true' }
     update_metadata(data)
     last_response.status.should == 422
-    last_response.json["error"].should =~
-      /the command requires one out of the all, key attributes to be supplied/
+    last_response.json["error"].should =~ /no-replace should be a boolean, but was actually a string/
   end
 
-  it "should require a value" do
-    data = { 'node' => "node#{node.id}", 'key' => 'k1' }
-    update_metadata(data)
-    last_response.status.should == 422
-    last_response.json["error"].should =~
-      /value is a required attribute, but it is not present/
-  end
-
-  it "should require no_replace to equal true" do
+  it "should conform no_replace" do
     data = { 'node' => "node#{node.id}", 'key' => 'k1', 'value' => 'v1', 'no_replace' => 'not true' }
     update_metadata(data)
     last_response.status.should == 422
-    last_response.json["error"].should =~ /'no_replace' must be boolean true or string 'true'/
+    last_response.json["error"].should =~ /no-replace should be a boolean, but was actually a string/
   end
 
   it "should require all to equal true" do
     data = { 'node' => "node#{node.id}", 'value' => 'v1', 'all' => 'not true' }
     update_metadata(data)
     last_response.status.should == 422
-    last_response.json["error"].should =~ /'all' must be boolean true or string 'true'/
+    last_response.json["error"].should =~ /all should be a boolean, but was actually a string/
   end
 
-  it "should succeed with 'all' and 'no_replace'" do
-    data = { 'node' => "node#{node.id}", 'value' => 'v1', 'all' => 'true', 'no_replace' => 'true' }
+  it "should succeed with 'all' and 'no-replace'" do
+    data = { 'node' => "node#{node.id}", 'value' => 'v1', 'all' => 'true', 'no-replace' => 'true' }
     update_metadata(data)
     last_response.status.should == 202
   end

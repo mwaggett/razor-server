@@ -6,6 +6,13 @@ describe "command and query API" do
   include Razor::Test::Commands
 
   let(:app) { Razor::App }
+  let(:command_hash) do
+    {
+        "name" => "magicos",
+        "iso-url" => "file:///dev/null",
+        "task"    => "some_os",
+    }
+  end
   before :each do
     authorize 'fred', 'dead'
   end
@@ -13,6 +20,10 @@ describe "command and query API" do
   context "/api/commands/create-repo" do
     before :each do
       header 'content-type', 'application/json'
+    end
+
+    describe Razor::Command::CreateRepo do
+      it_behaves_like "a command", status: 'pending'
     end
 
     it "should reject bad JSON" do
@@ -43,39 +54,12 @@ describe "command and query API" do
       last_response.status.should == 422
     end
 
-    it "should fail if iso-url and url are omitted" do
-      post '/api/commands/create-repo', {"name" => "magicos", "task" => {"name" => "some_os"}}.to_json
-      last_response.json['error'].should =~ /the command requires one out of the iso-url, url attributes to be supplied/
-      last_response.status.should == 422
-    end
-
-    it "should fail if task is omitted" do
-      post '/api/commands/create-repo', {
-          "name"      => "magicos",
-          "iso-url"   => "file:///dev/null",
-          "banana"    => "> orange",
-      }.to_json
-      last_response.json['error'].should =~ /task is a required attribute, but it is not present/
-      last_response.status.should == 422
-    end
-
-    it "should fail if task's name is omitted" do
-      post '/api/commands/create-repo', {
-          "name"      => "magicos",
-          "iso-url"   => "file:///dev/null",
-          "banana"    => "> orange",
-          "task"      => { }
-      }.to_json
-      last_response.json['error'].should =~ /task\.name is a required attribute, but it is not present/
-      last_response.status.should == 422
-    end
-
     it "should fail if an extra key is given, if otherwise good" do
       post '/api/commands/create-repo', {
         "name"      => "magicos",
         "iso-url"   => "file:///dev/null",
         "banana"    => "> orange",
-        "task"      => {'name' => "some_os"},
+        "task"      => "some_os",
       }.to_json
       last_response.json['error'].should =~ /extra attribute banana was present in the command, but is not allowed/
       last_response.status.should == 422
@@ -85,7 +69,7 @@ describe "command and query API" do
       command 'create-repo', {
         "name" => "magicos",
         "iso-url" => "file:///dev/null",
-        "task"    => {'name' => "some_os"},
+        "task"    => "some_os",
       }, :status => :pending
 
       last_response.status.should == 202
@@ -102,7 +86,7 @@ describe "command and query API" do
         data = {
           'name'    => repo.name,
           'iso-url' => repo.iso_url,
-          'task'    => {'name' => repo.task.name}
+          'task'    => repo.task.name
         }
 
         command 'create-repo', data
@@ -115,7 +99,7 @@ describe "command and query API" do
         data = {
           'name' => repo.name,
           'url'  => repo.iso_url,
-          'task' => {'name' => repo.task.name}
+          'task' => repo.task.name
         }
 
         command 'create-repo', data
@@ -130,17 +114,17 @@ describe "command and query API" do
       command 'create-repo', {
         "name" => "magicos",
         "iso-url" => "file:///dev/null",
-        "task"    => {'name' => "some_os"},
+        "task"    => "some_os",
       }, :status => :pending
 
       Repo.find(:name => "magicos").should be_an_instance_of Repo
     end
 
-    it "should conform to allow task-name shortcut" do
+    it "should conform to allow task-name long form" do
       command 'create-repo', {
           "name" => "magicos",
           "iso-url" => "file:///dev/null",
-          "task"    => "some_os",
+          "task"    => {'name' => 'some_os'},
       }, :status => :pending
 
       Repo.find(:name => "magicos").should be_an_instance_of Repo
