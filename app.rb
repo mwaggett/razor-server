@@ -206,7 +206,9 @@ and requires full control over the database (eg: add and remove tables):
     # Information to include on the microkernel kernel command line that
     # the MK agent uses to identify the node
     def microkernel_kernel_args
-      "razor.register=#{url("/svc/checkin/#{@node.id}")} #{Razor.config["microkernel.kernel_args"]}"
+      "razor.register=#{url("/svc/checkin/#{@node.id}")}" +
+        " razor.extend=#{url('/svc/mk/extension.zip')}" +
+        " #{Razor.config["microkernel.kernel_args"]}"
     end
   end
 
@@ -292,7 +294,20 @@ and requires full control over the database (eg: add and remove tables):
     return 400 unless json['facts']
     begin
       node = Razor::Data::Node[params["id"]] or return 404
+      unless node.registered?
+        # This is a newly created node (created by /svc/boot) and we haven't
+        # fully identified it yet. Since the facts tell us much more about
+        # the node than iPXE does, look the node up again, which, as a
+        # sideeffect will amend the node's hw_info
+        node = Razor::Data::Node.register(json['facts'])
+        return 404 unless node
+      end
       node.checkin(json).to_json
+    rescue Razor::Data::DuplicateNodeError => e
+      # Raised by register
+      e.log_to_nodes!
+      logger.error(e.message)
+      return 400
     rescue Razor::Matcher::RuleEvaluationError => e
       logger.error("during checkin of #{node.name}: " + e.message)
       { :action => :none }.to_json
@@ -464,6 +479,21 @@ and requires full control over the database (eg: add and remove tables):
       send_file fpath, :disposition => nil
     else
       [404, { :error => _("File %{path} not found") % {path: path} }.to_json ]
+    end
+  end
+
+  get '/svc/mk/extension.zip' do
+    path = Razor.config['microkernel.extension-zip']
+    if path and File.readable?(path) and File.file?(path)
+      send_file path, {
+        type:        'application/zip',
+        disposition: :attachment,
+        filename:    'extension.zip',
+        status:      200
+      }
+    else
+      content_type 'application/json'
+      [404, {:error => _('No extension file configured')}.to_json]
     end
   end
 
