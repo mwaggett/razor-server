@@ -4,10 +4,10 @@ require "./#{__FILE__}/../../razor_helper"
 confine :to, :platform => 'el-6'
 confine :except, :roles => %w{master dashboard database}
 
-test_name "C532 Create Policy"
-step "https://testrail.ops.puppetlabs.net/index.php?/cases/view/532"
+test_name "C552 Create Policy with non-existent tasks configuration parameter"
+step "https://testrail.ops.puppetlabs.net/index.php?/cases/view/552"
 
-reset_database
+reset_database agents
 
 razor agents, 'create-tag', {
   "name" => "small",
@@ -20,18 +20,16 @@ razor agents, 'create-repo', {
   "task" => "centos"
 }
 
-
 razor agents, 'create-broker', {
   "name"        => "noop",
   "broker-type" => "noop"
 }
 
 
-
 json = {
   "name"          => "centos-for-small",
   "repo"          => "centos-6.4",
-  "task"          => "centos",
+  "task"          => "explode",
   "broker"        => "noop",
   "enabled"       => true,
   "hostname"      => "host${id}.example.com",
@@ -40,8 +38,7 @@ json = {
   "tags"          => ["small"]
 }
 
-razor agents, 'create-policy', json do |agent|
-  step "Verify that the broker is defined on #{agent}"
-  text = on(agent, "razor -u http://#{agent}:8080/api policies").output
-  assert_match /name:\s*"centos-for-small"/, text
+razor agents, 'create-policy', json, exit: 1 do |agent, text|
+  assert_match /422 Unprocessable Entity/, text
+  assert_match /task must be the name of an existing task, but is 'explode'/, text
 end

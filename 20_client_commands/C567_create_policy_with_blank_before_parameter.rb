@@ -4,8 +4,8 @@ require "./#{__FILE__}/../../razor_helper"
 confine :to, :platform => 'el-6'
 confine :except, :roles => %w{master dashboard database}
 
-test_name "C532 Create Policy"
-step "https://testrail.ops.puppetlabs.net/index.php?/cases/view/532"
+test_name "C567 Create Policy with blank 'before' configuration parameter"
+step "https://testrail.ops.puppetlabs.net/index.php?/cases/view/567"
 
 reset_database
 
@@ -37,11 +37,11 @@ json = {
   "hostname"      => "host${id}.example.com",
   "root-password" => "secret",
   "max-count"     => 20,
-  "tags"          => ["small"]
+  "tags"          => ["small"],
+  "before"        => ""
 }
 
-razor agents, 'create-policy', json do |agent|
-  step "Verify that the broker is defined on #{agent}"
-  text = on(agent, "razor -u http://#{agent}:8080/api policies").output
-  assert_match /name:\s*"centos-for-small"/, text
+razor agents, 'create-policy', json, exit: 1 do |agent, text|
+  assert_match /404 Resource Not Found/, text
+  assert_match /before must be the name of an existing policy, but is ''/, text
 end

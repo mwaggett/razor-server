@@ -4,8 +4,8 @@ require "./#{__FILE__}/../../razor_helper"
 confine :to, :platform => 'el-6'
 confine :except, :roles => %w{master dashboard database}
 
-test_name "C532 Create Policy"
-step "https://testrail.ops.puppetlabs.net/index.php?/cases/view/532"
+test_name "C565 Create Policy with invalid max_count parameter"
+step "https://testrail.ops.puppetlabs.net/index.php?/cases/view/565"
 
 reset_database
 
@@ -36,7 +36,7 @@ json = {
   "enabled"       => true,
   "hostname"      => "host${id}.example.com",
   "root-password" => "secret",
-  "max-count"     => 20,
+  "max-count"     => -1,
   "tags"          => ["small"]
 }
 

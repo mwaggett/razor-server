@@ -4,8 +4,8 @@ require "./#{__FILE__}/../../razor_helper"
 confine :to, :platform => 'el-6'
 confine :except, :roles => %w{master dashboard database}
 
-test_name "C532 Create Policy"
-step "https://testrail.ops.puppetlabs.net/index.php?/cases/view/532"
+test_name "C555 Create Policy with non-existent broker configuration parameter"
+step "https://testrail.ops.puppetlabs.net/index.php?/cases/view/555"
 
 reset_database
 
@@ -21,13 +21,6 @@ razor agents, 'create-repo', {
 }
 
 
-razor agents, 'create-broker', {
-  "name"        => "noop",
-  "broker-type" => "noop"
-}
-
-
-
 json = {
   "name"          => "centos-for-small",
   "repo"          => "centos-6.4",
@@ -40,8 +33,7 @@ json = {
   "tags"          => ["small"]
 }
 
-razor agents, 'create-policy', json do |agent|
-  step "Verify that the broker is defined on #{agent}"
-  text = on(agent, "razor -u http://#{agent}:8080/api policies").output
-  assert_match /name:\s*"centos-for-small"/, text
+razor agents, 'create-policy', json, exit: 1 do |agent, text|
+  assert_match /404 Resource Not Found/, text
+  assert_match /broker must be the name of an existing broker, but is 'noop'/, text
 end
