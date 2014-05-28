@@ -4,29 +4,32 @@ require File.expand_path(__FILE__ + '/../../razor_helper', '.')
 confine :to, :platform => 'el-6'
 confine :except, :roles => %w{master dashboard database}
 
-test_name "C532 Create Policy"
-step "https://testrail.ops.puppetlabs.net/index.php?/cases/view/532"
+test_name "C538 Create Policy with max-count configuration parameter"
+step "https://testrail.ops.puppetlabs.net/index.php?/cases/view/538"
 
 reset_database
 
-razor agents, 'create-tag', {
+json = {
   "name" => "small",
   "rule" => ["=", ["fact", "processorcount"], "2"]
 }
 
-razor agents, 'create-repo', {
+razor agents, 'create-tag', json
+
+json = {
   "name" => "centos-6.4",
   "url"  => "http://provisioning.example.com/centos-6.4/x86_64/os/",
   "task" => "centos"
 }
 
+razor agents, 'create-repo', json
 
-razor agents, 'create-broker', {
+json = {
   "name"        => "noop",
   "broker-type" => "noop"
 }
 
-
+razor agents, 'create-broker', json
 
 json = {
   "name"          => "centos-for-small",

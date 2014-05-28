@@ -4,22 +4,15 @@ require File.expand_path(__FILE__ + '/../../razor_helper', '.')
 confine :to, :platform => 'el-6'
 confine :except, :roles => %w{master dashboard database}
 
-test_name "C532 Create Policy"
-step "https://testrail.ops.puppetlabs.net/index.php?/cases/view/532"
+test_name "C551 Create Policy with blank repo configuration parameter"
+step "https://testrail.ops.puppetlabs.net/index.php?/cases/view/551"
 
-reset_database
+reset_database agents
 
 razor agents, 'create-tag', {
   "name" => "small",
   "rule" => ["=", ["fact", "processorcount"], "2"]
 }
-
-razor agents, 'create-repo', {
-  "name" => "centos-6.4",
-  "url"  => "http://provisioning.example.com/centos-6.4/x86_64/os/",
-  "task" => "centos"
-}
-
 
 razor agents, 'create-broker', {
   "name"        => "noop",
@@ -27,10 +20,9 @@ razor agents, 'create-broker', {
 }
 
 
-
 json = {
   "name"          => "centos-for-small",
-  "repo"          => "centos-6.4",
+  "repo"          => "",
   "task"          => "centos",
   "broker"        => "noop",
   "enabled"       => true,
@@ -40,8 +32,7 @@ json = {
   "tags"          => ["small"]
 }
 
-razor agents, 'create-policy', json do |agent|
-  step "Verify that the broker is defined on #{agent}"
-  text = on(agent, "razor -u http://#{agent}:8080/api policies").output
-  assert_match /name:\s*"centos-for-small"/, text
+razor agents, 'create-policy', json, exit: 1 do |agent, text|
+  assert_match /404 Resource Not Found/, text
+  assert_match /repo must be the name of an existing repo, but is ''/, text
 end
