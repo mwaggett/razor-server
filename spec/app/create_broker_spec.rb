@@ -4,7 +4,7 @@ require_relative '../../app'
 
 require 'pathname'
 
-describe "create broker command" do
+describe Razor::Command::CreateBroker do
   include Razor::Test::Commands
 
   let(:app) { Razor::App }
@@ -27,9 +27,7 @@ describe "create broker command" do
       }
     end
 
-    describe Razor::Command::CreateBroker do
-      it_behaves_like "a command"
-    end
+    it_behaves_like "a command"
 
     def create_broker(params)
       command 'create-broker', params
@@ -80,6 +78,14 @@ describe "create broker command" do
       command = create_broker command_hash
 
       Razor::Data::Broker[:name => command['name']].should be_an_instance_of Razor::Data::Broker
+    end
+    # Successful creation
+    it "should return 202 when repeated with the same parameters" do
+      command = create_broker command_hash
+      command = create_broker command_hash
+
+      last_response.status.should == 202
+      last_response.json['id'].should =~ %r'/api/collections/brokers/#{URI.escape(command_hash['name'])}\Z'
     end
   end
 end
