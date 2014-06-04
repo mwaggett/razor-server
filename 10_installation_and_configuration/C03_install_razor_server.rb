@@ -4,7 +4,7 @@ require 'tmpdir'
 confine :to, :platform => 'el-6-x86_64'
 
 servers = agents.select do |node|
-  (node['roles'] & %w{master dashboard database}).empty?
+  (node['roles'] & %w{master dashboard database frictionless}).empty?
 end
 
 skip_test "No available razor server hosts" if servers.empty?

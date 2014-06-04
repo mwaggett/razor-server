@@ -1,6 +1,6 @@
 # -*- encoding: utf-8 -*-
 confine :to, :platform => 'el-6-x86_64'
-confine :except, :roles => %w{master dashboard database}
+confine :except, :roles => %w{master dashboard database frictionless}
 
 test_name 'Restart Razor Service'
 step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/8'
