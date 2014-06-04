@@ -29,10 +29,10 @@ def razor(where, what, args = nil, options = {}, &block)
     create_remote_file where, file, json
   end
 
-  where.each do |node|
+  Array(where).each do |node|
     step "Run #{what} on #{node}"
     cmd = "razor -u http://#{node}:8080/api #{what} " +
-      (json ? "--json #{file}" : args.shelljoin)
+      (json ? "--json #{file}" : Array(args).shelljoin)
 
     output = on(node, cmd, options).output
 
