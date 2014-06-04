@@ -1,5 +1,5 @@
 # -*- encoding: utf-8 -*-
-confine :to, :platform => 'el-6'
+confine :to, :platform => 'el-6-x86_64'
 confine :except, :roles => %w{master dashboard database}
 
 test_name 'Restart Razor Service'

@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 # this is required because of the use of eval interacting badly with require_relative
 require File.expand_path(__FILE__ + '/../../razor_helper', '.')
-confine :to, :platform => 'el-6'
+confine :to, :platform => 'el-6-x86_64'
 confine :except, :roles => %w{master dashboard database}
 
 test_name "C500	Create 'puppet' Broker with certname and server"

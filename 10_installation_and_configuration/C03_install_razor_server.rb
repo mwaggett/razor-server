@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 require 'tmpdir'
 
-confine :to, :platform => 'el-6'
+confine :to, :platform => 'el-6-x86_64'
 
 servers = agents.select do |node|
   (node['roles'] & %w{master dashboard database}).empty?
