@@ -11,7 +11,7 @@ reset_database
 # Note: this JSON is as specified in the testrail test case.
 step 'Create the JSON file containing the new task definition'
 json = {
-  "name" => "redhat6",
+  "name" => "new-task",
   "os" => "Red Hat Enterprise Linux",
   "boot_seq" =>{
     "1" => "boot_install",
@@ -27,11 +27,7 @@ json = {
 
 razor agents, 'create-task', json do |agent|
   step "Verify that the task is defined on #{agent}"
-  text = on(agent, "razor -u http://#{agent}:8080/api tasks").output
-  assert_match /name:\s*"redhat6"/, text
-
-  step "Verify the task continues do be defined"
-  text = on(agent, "razor -u http://#{agent}:8080/api tasks redhat6").output
-  assert_match /name:\s*"redhat6"/, text
+  text = on(agent, "razor -u http://#{agent}:8080/api tasks new-task").output
+  assert_match /name:\s*new-task/, text
 end
 
