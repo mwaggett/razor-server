@@ -12,7 +12,7 @@ reset_database
 step "create a node that we can set IPMI credentials on later"
 json = {'installed' => true, 'hw-info' => {'net0' => '00:0c:29:08:06:e0'}}
 razor agents, 'register-node', json do |node, text|
-  _, nodeid = text.match(/name: "(node\d+)"/).to_a
+  _, nodeid = text.match(/name: (node\d+)/).to_a
   refute_nil nodeid, 'failed to extract node ID from output'
 
   step "skipping verification until https://tickets.puppetlabs.com/browse/RAZOR-277 is fixed"

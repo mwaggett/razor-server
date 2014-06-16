@@ -9,42 +9,8 @@ step "https://testrail.ops.puppetlabs.net/index.php?/cases/view/538"
 
 reset_database
 
-json = {
-  "name" => "small",
-  "rule" => ["=", ["fact", "processorcount"], "2"]
-}
-
-razor agents, 'create-tag', json
-
-json = {
-  "name" => "centos-6.4",
-  "url"  => "http://provisioning.example.com/centos-6.4/x86_64/os/",
-  "task" => "centos"
-}
-
-razor agents, 'create-repo', json
-
-json = {
-  "name"        => "noop",
-  "broker-type" => "noop"
-}
-
-razor agents, 'create-broker', json
-
-json = {
-  "name"          => "centos-for-small",
-  "repo"          => "centos-6.4",
-  "task"          => "centos",
-  "broker"        => "noop",
-  "enabled"       => true,
-  "hostname"      => "host${id}.example.com",
-  "root-password" => "secret",
-  "max-count"     => 20,
-  "tags"          => ["small"]
-}
-
-razor agents, 'create-policy', json do |agent|
-  step "Verify that the broker is defined on #{agent}"
-  text = on(agent, "razor -u http://#{agent}:8080/api policies").output
-  assert_match /name:\s*"centos-for-small"/, text
+create_policy agents, policy_max_count: 20150 do |agent, _, hash|
+  step "Verify that the policy is defined on #{agent}"
+  text = on(agent, "razor -u http://#{agent}:8080/api policies #{hash[:policy][:name]}").output
+  assert_match /20150/, text
 end

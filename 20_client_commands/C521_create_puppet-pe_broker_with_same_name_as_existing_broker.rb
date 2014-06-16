@@ -15,7 +15,7 @@ json2 = {"name" => "puppet-broker-test", "broker-type" => "puppet-pe"}
 razor agents, 'create-broker', json1 do |agent|
   step "Verify that the broker is defined on #{agent}"
   text = on(agent, "razor -u http://#{agent}:8080/api brokers").output
-  assert_match /name:\s*"puppet-broker-test"/, text
+  assert_match /puppet-broker-test/, text
 end
 
 razor agents, 'create-broker', json2, exit: 1 do |agent, text|

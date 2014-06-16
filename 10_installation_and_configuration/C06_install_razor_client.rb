@@ -6,7 +6,11 @@ test_name 'Install Razor Client'
 step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/6'
 
 step 'Install the Razor client'
-on agents, 'gem install pe-razor-client'
+# This will use the FOSS razor-client gem until a private repository
+# can allow referencing not-yet-released versions of pe-razor-client.
+# Otherwise, acceptance testing could only be done on already released
+# razor-client, defeating the purpose.
+on agents, 'gem install razor-client'
 
 step 'Print Razor help, and check for JSON warning'
 agents.each do |agent|

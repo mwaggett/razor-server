@@ -39,6 +39,6 @@ json = {
 }
 
 razor agents, 'create-policy', json, exit: 1 do |agent, text|
-  assert_match /422 Unprocessable Entity/, text
-  assert_match /task must be the name of an existing task, but is 'explode'/, text
+  assert_match /400 Bad Request/, text
+  assert_match /task task 'explode' does not exist/, text
 end

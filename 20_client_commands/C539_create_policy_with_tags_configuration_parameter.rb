@@ -46,5 +46,5 @@ json = {
 razor agents, 'create-policy', json do |agent|
   step "Verify that the broker is defined on #{agent}"
   text = on(agent, "razor -u http://#{agent}:8080/api policies").output
-  assert_match /name:\s*"centos-for-small"/, text
+  assert_match /centos-for-small/, text
 end

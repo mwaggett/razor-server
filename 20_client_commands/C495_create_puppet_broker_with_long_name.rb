@@ -18,6 +18,6 @@ json = {"name" => "#{name}", "broker-type" => "puppet"}
 razor agents, 'create-broker', json do |agent|
   step "Verify that the broker is defined on #{agent}"
   text = on(agent, "razor -u http://#{agent}:8080/api brokers").output
-  assert_match /name:\s*"#{name}"/, text
+  assert_match /#{name}/, text
 end
 
