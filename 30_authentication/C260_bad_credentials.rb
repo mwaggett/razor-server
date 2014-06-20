@@ -1,6 +1,7 @@
 # -*- encoding: utf-8 -*-
 # this is required because of the use of eval interacting badly with require_relative
 require File.expand_path(__FILE__ + '/../../razor_helper', '.')
+require 'yaml'
 confine :to, :platform => 'el-6-x86_64'
 confine :except, :roles => %w{master dashboard database frictionless}
 
@@ -17,14 +18,15 @@ def with_backup_of(host, file)
     end
   end
 end
+
 agents.each do |agent|
   begin
     step "Enable authentication on #{agent}"
     with_backup_of(agent, 'config.yaml') do |config_tmpdir|
       config = on(agent, 'cat /etc/puppetlabs/razor/config.yaml').output
-      config = config.gsub(/(auth:\n\s*(#.+\n\s*)*enabled: )false/m, '\1true')
-      assert_match /auth:\n\s*(#.+\n\s*)*enabled: true/m, config,
-                   "Could not enable authentication; unfamiliar config.yaml"
+      yaml = YAML.load(config)
+      yaml['all']['auth']['enabled'] = true
+      config = YAML.dump(yaml)
       File.open(File::join(config_tmpdir, 'new-config.yaml'), 'w') {|f| f.write(config) }
       step "Copy modified config.yaml to #{agent}"
       scp_to agent, File::join(config_tmpdir, 'new-config.yaml'), '/etc/puppetlabs/razor/config.yaml'
