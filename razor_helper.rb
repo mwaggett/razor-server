@@ -121,7 +121,7 @@ def create_policy(agents, args = {}, &block)
     razor agents, 'create-policy', json do |agent, output|
       step "Verify that the policy is defined on #{agent}"
       text = on(agent, "razor -u http://#{agent}:8080/api policies '#{policy_name}'").output
-      assert_match /#{policy_name}/, text
+      assert_match /#{Regexp.escape(policy_name)}/, text
       block and case block.arity
         when 0 then yield
         when 1 then yield agent
