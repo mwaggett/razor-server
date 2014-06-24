@@ -150,12 +150,35 @@ def unicode_string(length = 50, exclude = "")
   (1..length).map do |index|
     ord = rand(max - min + 1) + min
     redo if exclude.include?(ord)
-    # Space character (32) cannot be at the start or the end of the string.
-    redo if (ord == 32 and [1, length].include?(index))
-    ord.chr('UTF-8')
+    chr = ord.chr('UTF-8')
+    redo if is_illegal(chr, index, length)
+    chr
   end.join
+end
+
+def is_illegal(char, position, length)
+  if position == 1 or position == length
+    # This comes from util.rb, used in the database.
+    return true if
+        char =~ %r'[\u0000-\u0020/\u0085\u00a0\u1680\u180e\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]'i
+    # No dash at the start to prevent '--', which is interpreted as a new param
+    position == 1 and char =~ /-/
+  else
+    # Middle characters here
+    char =~ %r'[\u0000-\u001f/]'i
+  end
 end
 
 def long_unicode_string(exclude = "")
   unicode_string(250, exclude)
+end
+
+def ascii_data
+  @ascii_data ||= [('a'..'z'), ('A'..'Z'), ('0'..'9'), %w(- _)].map(&:to_a).flatten
+end
+def long_string(length = 250)
+  name = (1..length).map { ascii_data[rand(ascii_data.length)] }.join
+  # Shouldn't start with "--" to avoid ambiguity with CLI arguments.
+  name = long_string(length) if name =~ /^--/
+  name
 end

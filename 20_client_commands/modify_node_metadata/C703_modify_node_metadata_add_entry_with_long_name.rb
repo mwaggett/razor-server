@@ -14,9 +14,8 @@ razor agents, 'register-node --installed true --hw-info net0=abcdef' do |agent, 
   step "Verify that the node is defined on #{agent}"
   text = on(agent, "razor -u http://#{agent}:8080/api nodes #{node_name}").output
   assert_match /name: /, text
-  data = "abc123-_"
-  key = (1..250).map { data[rand(data.length)] }.join
-  value = (1..250).map { data[rand(data.length)] }.join
+  key = long_string
+  value = long_string
 
   razor agent, "modify-node-metadata --node #{node_name} --update #{key}=#{value}" do |agent|
     step "Verify that the metadata for node #{node_name} is defined on #{agent}"
