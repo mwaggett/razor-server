@@ -144,7 +144,9 @@ def unicode_string(length = 50, exclude = "")
   #   `URI.parse(URI.escape("http://abc.com/\\["))`
   # - "'" causes problems with CLI, since we surround strings with
   #   that character.
-  exclude = (exclude + "\\'[]").split(//).map(&:ord)
+  # - "?" and "/" are not currently properly encoded in URLs.
+  #   Pending a RAZOR-334 fix, this can be removed.
+  exclude = (exclude + "\\?/'[]").split(//).map(&:ord)
   min = 32
   max = 45295
   (1..length).map do |index|
