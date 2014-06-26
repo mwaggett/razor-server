@@ -15,7 +15,7 @@ override_dh_auto_install:
 	mkdir -p $(BUILD_ROOT)/$(PE_PREFIX)/var/razor
 	rm -rf  vendor/jruby/1.9/cache
 	$(JRUBY) bundle config --local --path /$(PE_PREFIX)/share/$(RZR_NAME)/vendor/bundle
-	cp -pr  bin brokers db lib vendor app.rb config.ru config.yaml.sample Gemfile \
+	cp -pr  bin brokers db lib vendor locales app.rb config.ru config.yaml.sample Gemfile \
 					Gemfile.lock jars LICENSE NEWS.md Rakefile README.md tasks torquebox.rb \
 					$(BUILD_ROOT)/$(PE_PREFIX)/share/$(RZR_NAME)
 

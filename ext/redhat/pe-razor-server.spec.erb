@@ -100,6 +100,7 @@ cp -pr  .bundle brokers db lib app.rb config.ru Gemfile Gemfile.lock \
 cp -p   bin/razor-admin %{buildroot}%{_datadir}/razor-server/bin
 cp -p   bin/razor-admin-wrapper %{buildroot}%{_bindir}/razor-admin
 cp -p   config.yaml.sample %{buildroot}%{_sysconfdir}/razor
+cp -pr  locales %{buildroot}%{_datadir}/razor-server/locales
 
 # Munge the shebang on razor-admin to point to the correct jruby instance for PE
 sed -i 's,#! /usr/bin/env jruby,#!/opt/puppet/bin/jruby,g' %{buildroot}%{_datadir}/razor-server/bin/razor-admin
