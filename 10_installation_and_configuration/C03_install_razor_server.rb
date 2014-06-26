@@ -41,8 +41,6 @@ cat >> /etc/puppetlabs/puppet/manifests/site.pp <<EOT
 EOT
 SH
 
-  # Work around a bug in the PE packages.
-  on servers, 'mkdir -p /opt/puppet/share/razor-server/locales'
   on servers, puppet('agent -t'), acceptable_exit_codes: [0,2]
 end
 
