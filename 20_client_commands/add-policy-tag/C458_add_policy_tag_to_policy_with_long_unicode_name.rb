@@ -26,7 +26,7 @@ policy_name = results[:policy][:name]
 
 agents.each do |agent|
   step "Verify that the tag is not associated with policy on #{agent}"
-  text = on(agent, "razor -u http://#{agent}:8080/api policies #{policy_name}").output
+  text = on(agent, "razor -u http://#{agent}:8080/api policies '#{policy_name}'").output
   refute_match /#{tag_name}/, text
   end
 
