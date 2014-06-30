@@ -10,7 +10,8 @@ step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/583'
 reset_database
 # Note: this JSON is as specified in the testrail test case.
 step 'Create the JSON file containing the new task definition'
-name = long_unicode_string
+# Task names cannot contain '$'
+name = long_unicode_string('$')
 json = {
   "name" => name,
   "os" => "Red Hat Enterprise Linux",

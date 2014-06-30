@@ -148,8 +148,10 @@ def unicode_string(length = 50, exclude = "")
   #   Pending a RAZOR-334 fix, this can be removed.
   exclude = (exclude + "\\?/'[]").split(//).map(&:ord)
   min = 32
-  max = 45295
   (1..length).map do |index|
+    max = 45295
+    # Prioritize potentially problematic characters for long strings.
+    max = 70 if length > 150 && index < 50
     ord = rand(max - min + 1) + min
     redo if exclude.include?(ord)
     chr = ord.chr('UTF-8')
