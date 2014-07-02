@@ -52,9 +52,11 @@ describe Razor::Command::CreatePolicy do
     end
 
     it "should fail if 'tags' is wrong datatype" do
-      command_hash['tags'] = ''
+      command_hash['tags'] = {}
       create_policy
+      last_response.json['error'].should == 'tags should be a array, but was actually a object'
       last_response.status.should == 422
+      last_response.json['error'].should == 'tags should be a array, but was actually a object'
     end
 
     it "should fail if a nonexisting tag is referenced" do
