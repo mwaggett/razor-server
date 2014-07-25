@@ -12,7 +12,12 @@ step 'Install the Razor client'
 # are released, acceptance testing should be done on razor-client
 # rather than pe-razor-client since razor-client is more like future
 # PE versions.
-on agents, 'gem install pe-razor-client'
+# `--no-ri` is included here because this was otherwise resulting
+# in an error when it came to install razor-client:
+# "undefined method `map' for Gem::Specification:Class"
+# The other potential fix is to do `gem update --system`, which is
+# a larger system change.
+on agents, 'gem install pe-razor-client --no-ri'
 
 step 'Print Razor help, and check for JSON warning'
 agents.each do |agent|
@@ -22,24 +27,26 @@ agents.each do |agent|
     'The help information should be displayed')
 
   warning = Regexp.new(Regexp.escape('[WARNING] MultiJson is using the default adapter (ok_json).We recommend loading a different JSON library to improve performance.'))
-  assert_match(warning, text, 'A warning should be displayed complaining about JSON')
-end
+  step "Check whether warning is present"
+  # Some versions of Ruby have this warning; this should verify it can be removed.
+  if warning =~ text
+    step "Install json_pure"
+    on agents, 'gem install json_pure'
 
-step "install json_pure"
-on agents, 'gem install json_pure'
+    step "Verify JSON warning is gone"
+    agents.each do |agent|
+      text = on(agent, "razor -u http://#{agent}:8080/api").output
 
-step "verify JSON warning is gone"
-agents.each do |agent|
-  text = on(agent, "razor -u http://#{agent}:8080/api").output
+      assert_match(/Usage: razor \[FLAGS\] NAVIGATION/, text,
+                   'The help information should be displayed')
 
-  assert_match(/Usage: razor \[FLAGS\] NAVIGATION/, text,
-    'The help information should be displayed')
-
-  # Try a bunch of different things to try and be confident that changes in
-  # error formatting don't cause us grief tomorrow.
-  warning = Regexp.new(Regexp.escape('[WARNING] MultiJson is using the default adapter (ok_json).We recommend loading a different JSON library to improve performance.'))
-  assert_no_match warning, text, 'The JSON warning should not be present any longer'
-  assert_no_match /ok_json/, text, 'The JSON warning should not be present any longer'
-  assert_no_match /MultiJson/, text, 'The JSON warning should not be present any longer'
+      # Try a bunch of different things to try and be confident that changes in
+      # error formatting don't cause us grief tomorrow.
+      warning = Regexp.new(Regexp.escape('[WARNING] MultiJson is using the default adapter (ok_json).We recommend loading a different JSON library to improve performance.'))
+      assert_no_match warning, text, 'The JSON warning should not be present any longer'
+      assert_no_match /ok_json/, text, 'The JSON warning should not be present any longer'
+      assert_no_match /MultiJson/, text, 'The JSON warning should not be present any longer'
+    end
+  end
 end
 
