@@ -4,7 +4,7 @@ require File.expand_path(__FILE__ + '/../../../razor_helper', '.')
 confine :to, :platform => 'el-6-x86_64'
 confine :except, :roles => %w{master dashboard database frictionless}
 
-test_name "C494	Create 'puppet' Broker"
+test_name "C492	Create 'puppet' Broker"
 step "https://testrail.ops.puppetlabs.net/index.php?/cases/view/494"
 
 reset_database
