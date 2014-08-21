@@ -16,5 +16,5 @@ razor agents, 'create-tag --name puppet-test-tag --rule \'["=", ["fact", "proces
 end
 razor agents, 'create-tag --name puppet-test-tag --rule \'["=", ["fact", "some-other-fact"], "2"]\'', nil, exit: 1 do |agent, output|
   # @todo smcclellan 2014-03-30: This error will change when idempotency is preserved for this command.
-  assert_match /name is already taken/, output
+  assert_match /The tag puppet-test-tag already exists, and the matcher fields do not match/, output
 end
