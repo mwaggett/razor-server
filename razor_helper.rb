@@ -11,7 +11,7 @@ require 'net/ssh'
 class Net::SSH::Buffer
   def write(*data)
     data.each { |datum|
-      @content << datum.force_encoding('ASCII-8BIT')
+      @content << datum.force_encoding('BINARY')
     }
     self
   end
@@ -157,7 +157,9 @@ def unicode_string(length = 50, exclude = "")
     chr = ord.chr('UTF-8')
     redo if is_illegal(chr, index, length)
     chr
-  end.join
+  end.join.tap do |string|
+    step "Using unicode string of #{string}"
+  end
 end
 
 def is_illegal(char, position, length)
