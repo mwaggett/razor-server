@@ -11,7 +11,7 @@ require 'net/ssh'
 class Net::SSH::Buffer
   def write(*data)
     data.each { |datum|
-      @content << datum.force_encoding('BINARY')
+      @content << datum.dup.force_encoding('BINARY')
     }
     self
   end
