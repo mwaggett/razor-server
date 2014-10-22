@@ -32,7 +32,13 @@ step 'save the new firewall rules'
 on servers, 'service iptables save'
 
 step 'add node definitions for servers to the master'
-manifest = "#{master.puppet('master')['manifest']}/site.pp"
+
+if master.puppet('master')['manifest'].end_with? '.pp'
+  manifest = master.puppet('master')['manifest']
+else
+  manifest = "#{master.puppet('master')['manifest']}/site.pp"
+end
+
 with_backup_of master, manifest do
   on master, <<SH
 cat >> #{manifest} <<EOT
