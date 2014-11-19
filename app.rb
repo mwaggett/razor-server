@@ -142,8 +142,9 @@ and requires full control over the database (eg: add and remove tables):
       url "/svc/store_metadata/#{@node.id}?#{q}"
     end
 
-    def broker_install_url
-      url "/svc/broker/#{@node.id}/install"
+    def broker_install_url(script = nil)
+      args = "?script=#{script}" unless script.nil?
+      url "/svc/broker/#{@node.id}/install#{args}"
     end
 
     def node_url
@@ -383,6 +384,7 @@ and requires full control over the database (eg: add and remove tables):
                        :template => template)
     end
     @node.save
+    Razor::Data::Hook.run('node-booted', node: @node)
     render_template(template)
   end
 
@@ -423,24 +425,31 @@ and requires full control over the database (eg: add and remove tables):
     render_template(params[:template])
   end
 
-  # If we support more than just the `install` script in brokers, this should
-  # expand to take the template identifier like the file service does.
+  # This accepts a `script` parameter, which defaults to `install` for the file `install.erb`.
   get '/svc/broker/:node_id/install' do
     node = Razor::Data::Node[params[:node_id]]
     halt 404 unless node
-    halt 409 unless node.policy
+    error 409, :error => _("node %{node} not bound to a policy yet") % {node: node.id} unless node.policy
 
     content_type 'text/plain'   # @todo danielp 2013-09-24: ...or?
-    node.policy.broker.install_script_for(node)
+    script_name = params['script'] || 'install'
+    begin
+      node.policy.broker.install_script_for(node, script_name)
+    rescue Razor::InstallTemplateNotFoundError => e
+      error 404, :error => _("install template %{name}.erb does not exist") % {name: script_name},
+            :details => e.to_s
+    end
   end
 
   get '/svc/log/:node_id' do
-    node = Razor::Data::Node[params[:node_id]]
+    node = Razor::Data::Node[params[:node_id]] if params[:node_id]
     halt 404 unless node
-
-    node.log_append(:event => :node_log,
-                    :msg=> params[:msg], :severity => params[:severity])
-    node.save
+    entry = {:msg => params[:msg]}
+    entry = JSON::parse(entry.to_json)
+    event = Razor::Data::Event.new({:entry => entry})
+    event.severity = params[:severity] || 'info'
+    event.node = node
+    event.save
     [204, {}]
   end
 
@@ -503,7 +512,9 @@ and requires full control over the database (eg: add and remove tables):
   #
   # @todo danielp 2013-06-26: this should be some sort of discovery, not a
   # hand-coded list, but ... it will do, for now.
-  COLLECTIONS = [:brokers, :repos, :tags, :policies, :nodes, :tasks, :commands]
+  COLLECTIONS = [:brokers, :repos, :tags, :policies,
+                 [:nodes, {'start' => {"type" => "number"}, 'limit' => {"type" => "number"}}], :tasks, :commands,
+                 [:events, {'start' => {"type" => "number"}, 'limit' => {"type" => "number"}}], :hooks]
 
   #
   # The main entry point for the public/management API
@@ -525,8 +536,10 @@ and requires full control over the database (eg: add and remove tables):
     {
       "commands" => Razor::Command.all.map(&:to_command_list_hash).map {|c| c.dup.update("id" => url(c["id"])) },
       "collections" => COLLECTIONS.map do |coll|
+        coll, params = coll if coll.is_a?(Array)
         { "name" => coll, "rel" => spec_url("/collections/#{coll}"),
-          "id" => url("/api/collections/#{coll}")}
+          "id" => url("/api/collections/#{coll}"),
+          "params" => params }.delete_if { |_, v| v.nil? }
       end,
       "version" => { "server" => Razor::VERSION }
     }.to_json
@@ -648,8 +661,48 @@ and requires full control over the database (eg: add and remove tables):
     command_hash(cmd).to_json
   end
 
+  get '/api/collections/events' do
+    check_permissions!("query:events")
+
+    # Need to also order by ID here in case the granularity of timestamp is
+    # not enough to maintain a consistent ordering.
+    cursor = Razor::Data::Event.order(:timestamp).order(:id).reverse
+    collection_view cursor, 'events', limit: params[:limit], start: params[:start]
+  end
+
+  get '/api/collections/events/:id' do
+    params[:id] =~ /[0-9]+/ or error 400, :error => _("id must be a number but was %{id}") % {id: params[:id]}
+    check_permissions!("query:events:#{params[:id]}")
+    event = Razor::Data::Event[:id => params[:id]] or
+        error 404, :error => _("no event matched id=%{id}") % {id: params[:id]}
+    event_hash(event).to_json
+  end
+
+  get '/api/collections/hooks' do
+    check_permissions!("query:hooks")
+
+    collection_view Razor::Data::Hook, 'hooks'
+  end
+
+  get '/api/collections/hooks/:name' do
+    check_permissions!("query:hooks:#{params[:name]}")
+    hook = Razor::Data::Hook[:name => params[:name]] or
+        error 404, :error => _("no hook matched name=%{name}") % {name: params[:name]}
+    hook_hash(hook).to_json
+  end
+
+  get '/api/collections/hooks/:name/log' do
+    check_permissions!("query:hooks:#{params[:name]}")
+    hook = Razor::Data::Hook[:name => params[:name]] or
+        error 404, :error => _("no hook matched name=%{name}") % {name: params[:name]}
+    {
+        "spec" => spec_url("collections", "hooks", "log"),
+        "items" => hook.log(limit: params[:limit], start: params[:start])
+    }.to_json
+  end
+
   get '/api/collections/nodes' do
-    collection_view Razor::Data::Node.search(params), 'nodes'
+    collection_view Razor::Data::Node.search(params).order(:name), 'nodes', limit: params[:limit], start: params[:start]
   end
 
   get '/api/collections/nodes/:name' do
@@ -665,9 +718,12 @@ and requires full control over the database (eg: add and remove tables):
     # @todo lutter 2013-08-20: Do we need to send the log through a view ?
     node = Razor::Data::Node[:name => params[:name]] or
       error 404, :error => _("no node matched hw_id=%{hw_id}") % {hw_id: params[:hw_id]}
+    # This is not a standard collection in that each item is not just a
+    # reference, instead containing relevant details to make the `/log`
+    # view worthwhile without extra querying.
     {
       "spec" => spec_url("collections", "nodes", "log"),
-      "items" => node.log
+      "items" => node.log(limit: params[:limit], start: params[:start])
     }.to_json
   end
 
