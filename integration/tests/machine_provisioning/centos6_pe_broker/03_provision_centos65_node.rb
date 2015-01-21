@@ -53,7 +53,7 @@ step 'Ping Razor Node'
 retry_on(master, "ping -c 4 #{razor_node_hostname}", :max_retries => 24, :retry_interval => 10)
 
 step 'Manually Kick Off Puppet Run on Razor Node'
-ssh_with_password(razor_node_hostname, 'root', 'puppet', 'puppet agent -t', exit_codes = [2])
+on(razor_node, puppet('agent', '-t'), :acceptable_exit_codes => [0,2])
 
 step 'Verify that Razor Node is Fully Operational'
 on(razor_node, 'cat /var/log/razor.log')
