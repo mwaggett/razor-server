@@ -33,7 +33,7 @@ agents.each do |agent|
   step "Copy modified config.yaml to #{agent}"
   scp_to agent, 'new-config-yaml', "#{config_yaml}"
   File.delete('new-config-yaml')
-  on(agent, "chmod +r #{config_yaml}")
+  on agent, "chmod +r #{config_yaml}"
 
   step "Set up users on #{agent}"
   shiro = on(agent, 'cat /etc/puppetlabs/razor/shiro.ini').output

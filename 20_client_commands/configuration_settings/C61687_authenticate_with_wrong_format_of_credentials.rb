@@ -18,7 +18,7 @@ teardown do
   end
 end
 
-#backup
+step "Backup #{config_yaml}"
 agents.each do |agent|
   on(agent, "test -e #{config_yaml} && cp #{config_yaml} #{config_yaml_bak} || true")
 end

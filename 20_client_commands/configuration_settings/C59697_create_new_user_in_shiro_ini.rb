@@ -59,7 +59,7 @@ agents.each do |agent|
   step "Restart Razor Service on #{agent}"
   on agent, 'service pe-razor-server restart >&/dev/null'
 
-  step 'C62408: Authenticate to razor server #{agent} with correct user and wrong password'
+  step 'C59697: Authenticate to razor server #{agent} with newly created credentials'
   text = on(agent, "razor -u http://newUser:newPassword@#{agent}:8080/api").output
 
   assert_match(/Collections:/, text,
