@@ -18,6 +18,7 @@ teardown do
   agents.each do |agent|
     on(agent, "test -e #{config_yaml_bak} && mv #{config_yaml_bak} #{config_yaml} || rm #{config_yaml}")
     on(agent, "test -e #{shiro_ini_bak} && mv #{shiro_ini_bak} #{shiro_ini} || rm #{shiro_ini}")
+    on(agent, "chmod +r #{config_yaml} #{shiro_ini}")
     on(agent, 'service pe-razor-server restart >&/dev/null')
   end
 end

@@ -14,6 +14,7 @@ config_yaml_bak   = '/tmp/config.yaml.bak'
 teardown do
   agents.each do |agent|
     on(agent, "test -e #{config_yaml_bak} && mv #{config_yaml_bak} #{config_yaml} || rm #{config_yaml}")
+    on(agent, "chmod +r #{config_yaml}")
     on(agent, 'service pe-razor-server restart >&/dev/null')
   end
 end
