@@ -5,15 +5,20 @@ require 'yaml'
 confine :to, :platform => 'el-6-x86_64'
 confine :except, :roles => %w{master dashboard database frictionless}
 
-test_name 'Razor - C59715 create-hook with long unicode name  (250 characters)'
+test_name 'QA-1818 - C59715 - create-hook with long unicode name  (250 characters)'
 step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/59715'
 
 hook_dir      = '/opt/puppet/share/razor-server/hooks'
 hook_type     = 'hook_type_1'
 hook_name     = "扊扊扊℃갗ⴎ駘Ⰲ㽸Ꚁ扊℃갗ⴎ駘Ⰲ㽸Ꚁ扊℃갗ⴎ駘Ⰲ㽸Ꚁ扊℃갗ⴎ駘Ⰲ㽸Ꚁ扊℃갗ⴎ駘Ⰲ㽸Ꚁ扊℃갗ⴎ駘Ⰲ㽸Ꚁ扊℃갗ⴎ駘Ⰲ㽸Ꚁ扊℃갗ⴎ駘Ⰲ㽸Ꚁ扊℃갗ⴎ駘Ⰲ㽸Ꚁ扊℃갗ⴎ駘Ⰲ㽸Ꚁ扊"
-
 hook_path     = "#{hook_dir}/#{hook_type}.hook"
 
+teardown do
+  agents.each do |agent|
+    on(agent, "test -e #{hook_dir}.bak && mv #{hook_dir}.bak  #{hook_dir} || rm -rf #{hook_dir}")
+    on(agent, "razor -u http://#{agent}:8080/api delete-hook --name #{hook_name}")
+  end
+end
 
 step "Backup #{hook_dir}"
 agents.each do |agent|
@@ -48,12 +53,3 @@ agents.each do |agent|
     assert_match(/name: #{hook_name}/, result.stdout, 'razor create-hook failed')
   end
 end
-
-
-teardown do
-  agents.each do |agent|
-    on(agent, "test -e #{hook_dir}.bak && mv #{hook_dir}.bak  #{hook_dir} || rm -rf #{hook_dir}")
-    on(agent, "razor -u http://#{agent}:8080/api delete-hook --name #{hook_name}")
-  end
-end
-
