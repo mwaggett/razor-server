@@ -3,11 +3,11 @@ SCRIPT_PATH=$(pwd)
 BASENAME_CMD="basename ${SCRIPT_PATH}"
 SCRIPT_BASE_PATH=`eval ${BASENAME_CMD}`
 
-if [ $SCRIPT_BASE_PATH = "configuration_settings" ]; then
+if [ $SCRIPT_BASE_PATH = "create-hook" ]; then
   cd ../../
 fi
 
-export pe_dist_dir=http://pe-releases.puppetlabs.lan/3.7.1/
+export pe_dist_dir=http://neptune.puppetlabs.lan/4.0/ci-ready/
 
 beaker \
   --config test_run_scripts/configs/rhel6-64mda-64a.yaml \
