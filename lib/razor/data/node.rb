@@ -64,7 +64,7 @@ module Razor::Data
     #     nil   |  truthy   | installed, but we don't know how it was done
     #     nil   |   nil     | available for policy matching
     many_to_one :policy
-    one_to_many :node_log_entries
+    one_to_many :events
 
     # The tags that were applied to this node the last time it did a
     # checkin with the microkernel. These are not necessarily the same tags
@@ -131,12 +131,14 @@ module Razor::Data
       hostname.split(".").first
     end
 
-    # Retrive the entire log for this node as an array of hashes, ordered
+    # Retrieve the entire log for this node as an array of hashes, ordered
     # by increasing timestamp. In addition to the keys mentioned for
     # +log_append+ each entry will also contain the +timstamp+ in ISO8601
     # format
-    def log
-      node_log_entries_dataset.order(:timestamp).map do |log|
+    def log(params = {})
+      cursor = Razor::Data::Event.order(:timestamp).order(:id).reverse.
+          where(node_id: id).limit(params[:limit], params[:start])
+      cursor.map do |log|
         { 'timestamp' => log.timestamp.xmlschema }.update(log.entry)
       end
     end
@@ -168,7 +170,7 @@ module Razor::Data
       # reloading)
       entry = JSON::parse(entry.to_json)
 
-      add_node_log_entry(:entry => entry)
+      add_event(:entry => entry)
     end
 
     # Return +true+ if the node has fully registered, i.e. has sent us its
@@ -210,7 +212,14 @@ module Razor::Data
         modify_metadata('no_replace' => true, 'update' => policy.node_metadata)
       end
 
+      Razor::Data::Hook.run('node-bound-to-policy', node: self, policy: policy)
+
       self
+    end
+
+    def unbind
+      self.policy = nil
+      Razor::Data::Hook.run('node-unbound-from-policy', node: self)
     end
 
     # This is a hack around the fact that the auto_validates plugin does
@@ -313,6 +322,7 @@ module Razor::Data
       end
       if facts != new_facts
         self.facts = new_facts
+        Razor::Data::Hook.run('node-facts-changed', node: self)
       end
       # @todo lutter 2013-09-09: we'd really like to use the DB's idea of
       # time, i.e. have the update statement do 'last_checkin = now()' but
@@ -410,6 +420,11 @@ module Razor::Data
       end
     end
 
+    def destroy
+      super
+      Razor::Data::Hook.run('node-deleted', node: self)
+    end
+
     # Use the facts +facts+ to fully register the node; this is a
     # counterpart to +lookup+; while +lookup+ uses the much more restricted
     # information provided by iPXE, this method relies on all the facts
@@ -453,10 +468,11 @@ module Razor::Data
         keep_node.hw_info = hw_info
 
         kill_nodes.each do |kill_node|
-          kill_node.node_log_entries_dataset.update(:node_id => keep_node.id)
+          kill_node.events_dataset.update(:node_id => keep_node.id)
           kill_node.destroy
         end
         keep_node.save
+        Razor::Data::Hook.run('node-registered', node: keep_node)
         keep_node
       end
     end
@@ -468,6 +484,7 @@ module Razor::Data
       node.boot_count += 1
       if name == "finished" and node.policy
         node.installed = node.policy.name
+        Razor::Data::Hook.run('node-install-finished', node: self)
       end
       node.save
     end

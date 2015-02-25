@@ -23,6 +23,7 @@ module Razor::Data
     # typically through the constructor.  Only enforced at the Ruby layer, but
     # since we direct everything through the model that is acceptable.
     set_allowed_columns :name, :iso_url, :url, :task_name
+    one_to_many :events
 
     # Create a new repo and kick off the background import of its ISO (if
     # there is one) The +command+ is used to track progress of the import
@@ -53,8 +54,6 @@ module Razor::Data
       super
       if url and iso_url
         errors.add(:urls, _("only one of the 'url' and 'iso_url' attributes can be set at the same time"))
-      elsif url.nil? and iso_url.nil?
-        errors.add(:urls, _("you must set one of the 'url' or 'iso_url' attributes"))
       end
     end
 
@@ -69,12 +68,17 @@ module Razor::Data
     # @warning this should not be called inside a transaction.
     def make_the_repo_accessible(command)
       command.store('running')
-      url = URI.parse(iso_url)
-      if url.scheme.downcase == 'file'
-        File.readable?(url.path) or raise _("unable to read local file %{path}") % {path: url.path}
-        publish 'unpack_repo', command, url.path
+      if url.nil? and iso_url.nil?
+        # This is done to create a stub directory to manually install the repo.
+        publish 'unpack_repo', command, nil
       else
-        publish 'unpack_repo', command, download_file_to_tempdir(url)
+        url = URI.parse(iso_url)
+        if url.scheme.downcase == 'file'
+          File.readable?(url.path) or raise _("unable to read local file %{path}") % {path: url.path}
+          publish 'unpack_repo', command, url.path
+        else
+          publish 'unpack_repo', command, download_file_to_tempdir(url)
+        end
       end
     end
 
@@ -171,7 +175,7 @@ module Razor::Data
     def unpack_repo(command, path)
       destination = iso_location
       destination.mkpath        # in case it didn't already exist
-      Archive.extract(path, destination)
+      Archive.extract(path, destination) if path
       self.publish('release_temporary_repo', command)
     end
 

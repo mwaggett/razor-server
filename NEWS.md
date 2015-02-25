@@ -1,6 +1,13 @@
 # Razor Server Release Notes
 
-## Next
+## 0.16.1 - 2015-01-12
+
+### Other
+
++ BUGFIX: Fixing a bug that would not allow new events to be created
+  in the database due to a plugin conflict.
+
+## 0.16.0 - 2015-01-05
 
 ### Incompatible changes
 
@@ -8,6 +15,67 @@
   could have existed as e.g. 'mytag' and 'MyTag'. A migration in this
   release will rename conflicting tags, appending a digit to the end,
   e.g. 'mytag' and 'MyTag1'.
++ The `update-node-metadata` command no longer accepts the `all`
+  argument. This argument should have never been accepted by the 
+  command, and had no effect. Instead, `modify-node-metadata` can be 
+  called with either the `clear` argument to remove all keys, or the 
+  `update` argument to set all keys to certain values, which achieves 
+  the same function.
+
+### API changes
+
++ `create-hook` and `delete-hook` are two new commands for managing
+  hooks.
++ `events` collection now displays events from the Razor server.
+  This can be scoped by querying `nodes/$name/log` or
+  `hooks/$name/$log`.
++ Various collections can now be limited and offset by supplying
+  `limit` and `start` parameters. These parameters can be discovered
+  via the logically prior endpoint. For `/api/collections/events`,
+  this is in `/api`. For `/api/collections/nodes/$name/log`, this is
+  in `/api/collections/nodes/$name`.
++ Help text now exists for razor-client in addition to just the API.
+  This is accessible via a GET on the command's endpoint, where the
+  new 'examples' key in the help text has 'api' and 'cli' as sub-keys.
++ The `create-repo` command now accepts a `--no-content` argument,
+  which signifies that neither the `--iso-url` nor the `--url`
+  arguments will be supplied, and instead an empty directory will be
+  created.
++ `create-tag` is now idempotent.
+
+### Task changes
+
++ NEW: Added Windows tasks for 2012R2.
++ NEW: Added Ubuntu tasks for Lucid (10.04) and Trusty (14.04).
++ NEW: Windows tasks can execute brokers.
++ BUGFIX: Fixed existing Debian i386 task.
++ IMPROVEMENT: Windows default task (8 pro) now utilizes node's
+  root_password value rather than the default `razor`.
++ IMPROVEMENT: Windows tasks now use newer wimboot (2.4.0)
++ IMPROVEMENT: Debian and Ubuntu (Trusty only) can allow hostname
+  without '.' for fetching preseed file.
+
+### Other
+
++ NEW: Hooks. See `hooks.md` for details on how to write and use hooks.
++ NEW: Separate API and CLI help examples: There are now two formats for help
+  examples. The new CLI format shows help text as a standard razor-client
+  command.
++ IMPROVEMENT: Updating Torquebox to 3.1.1 and JRuby to 1.7.13.
++ BUGFIX: Fixing heap space issues with default settings in Torquebox.
++ IMPROVEMENT: Standardizing behavior for creating two entities whose names only
+  differ in case.
++ IMPROVEMENT: Adding idempotency in `create-tag`.
++ NEW: Exposing IPMI details (username and hostname) in `razor --full nodes`.
++ NEW: Provide warning in `create-policy` if the user attempts to create a
+  tag, a feature which was removed in 0.15.0.
++ IMPROVEMENT: `create-broker` now accepts argument `c` as an alias for
+  `configuration`.
++ NEW: Brokers can now use arbitrary executable files for installation,
+  which is most helpful for Powershell in Windows.
++ BUGFIX: Some attempts to contact Razor server are retried upon failure.
++ BUGFIX: Disallowing old versions of Sinatra where download of initrd.gz
+  would hang.
 
 ## 0.15.0 - 2014-05-22
 

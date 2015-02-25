@@ -1,11 +1,12 @@
 # -*- powershell -*-
 
-# If we have a configuration file, source it in.
+# If we have a configuration file, source it in. The file must set
+# $baseurl to something like http://razor:8080/svc
 $configfile = join-path $env:SYSTEMDRIVE "razor-client-config.ps1"
 if (test-path $configfile) {
     write-host "sourcing configuration from $configfile"
     . $configfile
-    # $server is now set
+    # $baseurl is now set
 } else {
     # No sign of a configuration file, guess that our DHCP server is also our
     # Razor server, and point at that.  Could easily be wrong, but what else
@@ -20,10 +21,9 @@ if (test-path $configfile) {
                           $_.dhcpleaseobtained } |
                   select -uniq -first 1 -expandproperty dhcpserver
 
+    write-host "using server $server"
+    $baseurl = "http://${server}:8080/svc"
 }
-
-$baseurl = "http://${server}:8080/svc"
-
 
 # Figure out our node hardware ID details, since we can't get at anything more
 # useful from our boot environment.  Sadly, rediscovery is the order of the
@@ -37,7 +37,24 @@ $hwid = $hwid -join '&' -replace ':', '-'
 # number that we can use for our next step -- accessing our bound
 # installer templates.
 write-host "contact ${baseurl}/nodeid?${hwid} for ID mapping"
-$data = invoke-restmethod "${baseurl}/nodeid?${hwid}"
+# Try contacting the Razor server up to 10 times over 30s. Sometimes, the
+# first few tries fail, presumably because the network isn't up fully yet
+$tries = 0
+$err = @()
+do {
+   if ($tries -gt 0) {
+     write-host " ... will retry in 3s"
+     start-sleep 3
+   }
+   $data = Invoke-RestMethod "${baseurl}/nodeid?${hwid}" -ErrorAction SilentlyContinue -ErrorVariable err
+   $tries = $tries + 1
+} while ($tries -lt 10 -and $err.count -gt 0)
+
+if ($err.count -gt 0) {
+  write-error "Failed to contact ${baseurl}/nodeid?${hwid}; giving up"
+  exit 1
+}
+
 $id = $data.id
 write-host "mapped myself to node ID ${id}"
 

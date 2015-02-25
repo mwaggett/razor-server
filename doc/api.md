@@ -101,9 +101,10 @@ when the command has finished.
 
 ### Create new repo
 
-There are two flavors of repositories: ones where Razor unpacks ISO's for
-you and serves their contents, and ones that are somewhere else, for
-example, on a mirror you maintain. The first form is created by creating a
+There are three flavors of repositories: ones where Razor unpacks ISO's for
+you and serves their contents, ones that are somewhere else (For example,
+on a mirror you maintain), and ones where a stub directory is created and
+the contents can be entered manually. The first form is created by creating a
 repo with the `iso-url` property; the server will download and unpack the
 ISO image into its file system:
 
@@ -114,12 +115,24 @@ ISO image into its file system:
     }
 
 The second form is created by providing a `url` property when you create
-the repository; this form is merely a pointer to a resource somehwere and
+the repository; this form is merely a pointer to a resource somewhere and
 nothing will be downloaded onto the Razor server:
 
     {
       "name": "fedora19",
       "url": "http://mirrors.n-ix.net/fedora/linux/releases/19/Fedora/x86_64/os/"
+      "task": "noop"
+    }
+
+The third form is created by providing a `no-content` property when you
+create the repository. This format will create an empty directory in the
+repo-store directory where files can be added manually. This is useful
+for ISOs which have issues being uncompressed normally due to e.g.
+forward references:
+
+    {
+      "name": "fedora19",
+      "no-content": true
       "task": "noop"
     }
 
@@ -348,6 +361,35 @@ name of a single policy:
 Note that this does not affect the `installed` status of a node, and
 therefore won't, by itself, cause a node to be bound to another policy upon
 reboot.
+
+### Create hook
+
+A hook can be created with the `create-hook` command.  It accepts the name
+of a single hook, plus the `hook-type` which references existing code
+on the Razor server's `hooks` directory, and an optional starting
+configuration corresponding to that hook-type:
+
+    {
+      "name": "myhook",
+      "hook-type": "some_hook",
+      "configuration": {"foo": 7, "bar": "rhubarb"}
+    }
+
+The code on the server would be contained in the `hooks/some_hook.hook`
+directory. More information on hooks can be found in the Hooks README 
+(`hooks.md`).
+
+### Delete hook
+
+A single hook can be removed from the database with the `delete-hook`
+command. It accepts the name of a single hook:
+
+    {
+        "name": "myhook"
+    }
+
+The hook will then no longer be triggered for node events and any
+existing properties in the hook's `configuration` will be deleted.
 
 ### Delete node
 

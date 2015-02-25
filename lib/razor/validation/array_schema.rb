@@ -18,15 +18,12 @@ class Razor::Validation::ArraySchema
   # documentation inside the object; we just throw it raw into the help
   # template when required.
   HelpTemplate = ERB.new(_(<<-ERB), nil, '%')
-% if @help
-<%= @help %>
-%end
 % @checks.each do |check|
-<%= check %>
+<%= check.help %>
 % end
   ERB
 
-  def to_s
+  def help
     HelpTemplate.result(binding)
   end
 

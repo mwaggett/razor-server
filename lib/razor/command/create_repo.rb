@@ -6,7 +6,7 @@ Create a new repository, which can either contain the content to install a
 node, or simply point to an existing online repository by URL.
   EOT
 
-  example <<-EOT
+  example api: <<-EOT
 Create a repository from an ISO image, which will be downloaded and unpacked
 by the razor-server in the background:
 
@@ -35,14 +35,38 @@ downloaded onto the Razor server:
     }
   EOT
 
+  example cli: <<-EOT
+Create a repository from an ISO image, which will be downloaded and unpacked
+by the razor-server in the background:
+
+    razor create-repo --name fedora19 \\
+        --iso-url http://example.com/Fedora-19-x86_64-DVD.iso \\
+        --task fedora
+
+You can also unpack an ISO image from a file *on the server*; this does not
+upload the file from the client:
+
+    razor create-repo --name fedora19 \\
+        --iso-url file:///tmp/Fedora-19-x86_64-DVD.iso \\
+        --task fedora
+
+Finally, you can provide a `url` property when you create the repository;
+this form is merely a pointer to a resource somewhere and nothing will be
+downloaded onto the Razor server:
+
+    razor create-repo --name fedora19 --iso-url \\
+        http://mirrors.n-ix.net/fedora/linux/releases/19/Fedora/x86_64/os/ \\
+        --task fedora
+  EOT
+
   authz '%{name}'
   attr  'name', type: String, required: true, size: 1..250,
                 help: _('The name of the repository.')
 
-  attr 'url', type: URI, exclude: 'iso-url', size: 1..1000,
+  attr 'url', type: URI, exclude: ['iso-url', 'no-content'], size: 1..1000,
               help: _('The URL of the remote repository to use.')
 
-  attr 'iso-url', type: URI, exclude: 'url', size: 1..1000, help: _(<<-HELP)
+  attr 'iso-url', type: URI, exclude: ['url', 'no-content'], size: 1..1000, help: _(<<-HELP)
     The URL of the ISO image to download and unpack to create the
     repository.  This can be an HTTP or HTTPS URL, or it can be a
     file URL.
@@ -53,13 +77,19 @@ downloaded onto the Razor server:
     command.
   HELP
 
+  attr 'no-content', type: TrueClass, exclude: ['iso-url', 'url'], help: _(<<-HELP)
+    For cases where extraction will be done manually, this argument
+    creates a stub directory in the repo store where the extracted
+    contents can be placed.
+  HELP
+
   attr 'task', type: String, required: true, help: _(<<-HELP)
     The name of the task associated with this repository.  This is used to
     install nodes that match a policy using this repository; generally it
     should match the OS that the URL or ISO-URL attributes point to.
   HELP
 
-  require_one_of 'url', 'iso-url'
+  require_one_of 'url', 'iso-url', 'no-content'
 
   def run(request, data)
     # Create our shiny new repo.  This will implicitly, thanks to saving
@@ -68,6 +98,9 @@ downloaded onto the Razor server:
     # background workers without also committing this data to our database.)
     data["iso_url"] = data.delete("iso-url")
     data["task_name"] = data.delete("task")
+
+    # Remove this; it just helped bypass `url` and `iso-url`.
+    data.delete('no-content')
 
     Razor::Data::Repo.import(data, @command).first
   end
