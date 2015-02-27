@@ -64,6 +64,10 @@ and requires full control over the database (eg: add and remove tables):
     # --daniel 2013-06-26
     request.preferred_type('application/json') or
       halt [406, {"error" => _("only application/json content is available")}.to_json]
+
+    if Razor.config['secure_api']
+      request.secure? or halt [404, {"error" => _("API requests must be over SSL (secure_api config property is enabled)")}.to_json]
+    end
   end
 
   #
@@ -427,14 +431,17 @@ and requires full control over the database (eg: add and remove tables):
 
   # This accepts a `script` parameter, which defaults to `install` for the file `install.erb`.
   get '/svc/broker/:node_id/install' do
-    node = Razor::Data::Node[params[:node_id]]
-    halt 404 unless node
-    error 409, :error => _("node %{node} not bound to a policy yet") % {node: node.id} unless node.policy
+    @node = Razor::Data::Node[params[:node_id]]
+    halt 404 unless @node
+    error 409, :error => _("node %{node} not bound to a policy yet") % {node: @node.id} unless @node.policy
 
     content_type 'text/plain'   # @todo danielp 2013-09-24: ...or?
     script_name = params['script'] || 'install'
     begin
-      node.policy.broker.install_script_for(node, script_name)
+      # The stage_done_url needs to be generated in Sinatra, so we calculate it here and pass it on.
+      stage_done_url = stage_done_url('broker')
+      @node.policy.broker.install_script_for(@node, script_name,
+                                            'stage_done_url' => stage_done_url)
     rescue Razor::InstallTemplateNotFoundError => e
       error 404, :error => _("install template %{name}.erb does not exist") % {name: script_name},
             :details => e.to_s
