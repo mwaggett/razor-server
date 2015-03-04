@@ -43,6 +43,8 @@ files:
   - config.yaml.sample
   - Gemfile
   - Gemfile.lock
+  - hooks
+  - hooks.md
   - jars
   - LICENSE
   - NEWS.md
