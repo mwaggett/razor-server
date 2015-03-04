@@ -36,7 +36,7 @@ agents.each do |agent|
 
   step "Set up users on #{agent}"
   on(agent, 'cat /etc/puppetlabs/razor/shiro.ini') do |result|
-    assert_match(/^\s*razor = razor/, result.stdout, 'User razor should already have password "razor"')
+    assert_match /^\s*razor = razor/, result.stdout, 'User razor should already have password "razor"'
   end
 
   step "Restart Razor Service on #{agent}"
@@ -45,7 +45,7 @@ agents.each do |agent|
   on agent, 'service pe-razor-server restart >&/dev/null'
 
   step 'C62410: Authenticate to razor server #{agent} with bad user and bad password'
-  on(agent, "razor -u http://badUser:badPassword@#{agent}:8080/api") do |result|
+  on(agent, "razor -u https://badUser:badPassword@#{agent}:8151/api") do |result|
     assert_match(/Credentials are required/, result.stdout, 'The request should be unauthorized')
   end
 end

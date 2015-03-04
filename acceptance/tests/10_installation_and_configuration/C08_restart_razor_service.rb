@@ -12,7 +12,7 @@ on agents, 'service pe-razor-server restart >&/dev/null'
 
 step 'Verify restart was successful'
 agents.each do |agent|
-  text = on(agent, "razor -u http://#{agent}:8080/api").output
+  text = on(agent, "razor -u https://#{agent}:8151/api").output
 
   assert_match(/Usage: razor \[FLAGS\] NAVIGATION/, text,
     'The help information should be displayed')

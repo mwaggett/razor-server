@@ -17,6 +17,6 @@ json = {
 
 razor agents, 'create-repo', json do |agent|
   step "Verify that the repo is defined on #{agent}"
-  text = on(agent, "razor -u http://#{agent}:8080/api repos").output
+  text = on(agent, "razor -u https://#{agent}:8151/api repos").output
   assert_match /#{'a' * 250}/, text
 end

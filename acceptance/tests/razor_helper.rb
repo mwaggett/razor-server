@@ -46,7 +46,7 @@ def razor(where, what, args = nil, options = {}, &block)
 
   Array(where).each do |node|
     step "Run #{what} on #{node}"
-    cmd = "razor -u http://#{node}:8080/api #{what} " +
+    cmd = "razor -u https://#{node}:8151/api #{what} " +
       (json ? "--json #{file}" : Array(args).shelljoin)
 
     output = on(node, cmd, options).output
@@ -120,7 +120,7 @@ def create_policy(agents, args = {}, &block)
       tag_name: tag_name, task_name: task_name}.tap do |return_hash|
     razor agents, 'create-policy', json do |agent, output|
       step "Verify that the policy is defined on #{agent}"
-      text = on(agent, "razor -u http://#{agent}:8080/api policies '#{policy_name}'").output
+      text = on(agent, "razor -u https://#{agent}:8151/api policies '#{policy_name}'").output
       assert_match /#{Regexp.escape(policy_name)}/, text
       block and case block.arity
         when 0 then yield

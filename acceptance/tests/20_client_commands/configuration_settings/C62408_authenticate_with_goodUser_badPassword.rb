@@ -45,7 +45,7 @@ agents.each do |agent|
   on agent, 'service pe-razor-server restart >&/dev/null'
 
   step 'C62408: Authenticate to razor server #{agent} with correct user and wrong password'
-  on(agent, "razor -u http://razor:wrongPassword@#{agent}:8080/api") do |result|
+  on(agent, "razor -u https://razor:wrongPassword@#{agent}:8151/api") do |result|
     assert_match(/Credentials are required/, result.stdout, 'The request should be unauthorized')
   end
 end
