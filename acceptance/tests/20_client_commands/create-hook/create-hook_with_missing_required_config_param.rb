@@ -45,7 +45,7 @@ agents.each do |agent|
   on(agent, "chmod +r #{hook_path}/configuration.yaml")
 
   step 'create hook with  missing hook configuration attr'
-  on(agent, "razor -u http://#{agent}:8080/api create-hook --name #{hook_name}" \
+  on(agent, "razor -u https://#{agent}:8151/api create-hook --name #{hook_name}" \
             " --hook-type #{hook_type}", :acceptable_exit_codes => [1]) do |result| \
         assert_match %r(error: configuration key 'value' is required by this hook type, but was not supplied), result.stdout
   end

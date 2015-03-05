@@ -11,7 +11,7 @@ reset_database
 
 razor agents, 'create-tag --name puppet-test-tag --rule \'["=", ["fact", "processorcount"], "2"]\'' do |agent|
   step "Verify that the tag is defined on #{agent}"
-  text = on(agent, "razor -u http://#{agent}:8080/api tags").output
+  text = on(agent, "razor -u https://#{agent}:8151/api tags").output
   assert_match /puppet-test-tag/, text
 end
 
@@ -41,12 +41,12 @@ json = {
 
 razor agents, 'create-policy', json do |agent|
   step "Verify that the policy is defined on #{agent}"
-  text = on(agent, "razor -u http://#{agent}:8080/api policies").output
+  text = on(agent, "razor -u https://#{agent}:8151/api policies").output
   assert_match /puppet-test-policy/, text
 end
 
 razor agents, 'delete-tag --name puppet-test-tag --force' do |agent|
   step "Verify that the tag is no longer defined on #{agent}"
-  text = on(agent, "razor -u http://#{agent}:8080/api tags").output
+  text = on(agent, "razor -u https://#{agent}:8151/api tags").output
   refute_match /puppet-test-tag/, text
 end

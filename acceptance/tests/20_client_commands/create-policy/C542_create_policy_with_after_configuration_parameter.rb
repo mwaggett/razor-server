@@ -45,7 +45,7 @@ json = {
 
 razor agents, 'create-policy', json do |agent|
   step "Verify that the broker is defined on #{agent}"
-  text = on(agent, "razor -u http://#{agent}:8080/api policies").output
+  text = on(agent, "razor -u https://#{agent}:8151/api policies").output
   assert_match /centos-for-after/, text
 end
 
@@ -65,7 +65,7 @@ json = {
 
 razor agents, 'create-policy', json do |agent|
   step "Verify that the broker is defined on #{agent}"
-  text = on(agent, "razor -u http://#{agent}:8080/api policies").output
+  text = on(agent, "razor -u https://#{agent}:8151/api policies").output
   assert_match /centos-with-after/, text
 
   # Make sure they are ordered correctly...

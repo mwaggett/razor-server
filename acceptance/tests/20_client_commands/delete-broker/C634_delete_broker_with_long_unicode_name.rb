@@ -17,7 +17,7 @@ json = {
 }
 razor agents, 'create-broker', json do |agent|
   step "Verify that the broker is defined on #{agent}"
-  text = on(agent, "razor -u http://#{agent}:8080/api brokers").output
+  text = on(agent, "razor -u https://#{agent}:8151/api brokers").output
   assert_match /#{Regexp.escape(name)}/, text
 end
 
@@ -26,6 +26,6 @@ json = {
 }
 razor agents, 'delete-broker', json do |agent|
   step "Verify that the broker is no longer defined on #{agent}"
-  text = on(agent, "razor -u http://#{agent}:8080/api brokers").output
+  text = on(agent, "razor -u https://#{agent}:8151/api brokers").output
   refute_match /#{Regexp.escape(name)}/, text
 end
