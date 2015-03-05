@@ -11,7 +11,7 @@ agents.each do |agent|
   # when we add more than centos as a SUT.
   install_package agent, 'wget'
 
-  on agent, "wget http://#{agent}:8080/api -O /tmp/test.out"
+  on agent, "wget --no-check-certificate https://#{agent}:8151/api -O /tmp/test.out"
   on agent, 'grep commands/set-node-hw-info /tmp/test.out'
 end
 

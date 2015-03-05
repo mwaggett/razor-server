@@ -13,7 +13,7 @@ tag_name = 'puppet-test-tag'
 
 razor agents, 'create-tag --name ' + tag_name + ' --rule \'["=", ["fact", "processorcount"], "2"]\'' do |agent|
   step "Verify that the tag is defined on #{agent}"
-  text = on(agent, "razor -u http://#{agent}:8080/api tags").output
+  text = on(agent, "razor -u https://#{agent}:8151/api tags").output
   assert_match /#{tag_name}/, text
 end
 
@@ -22,7 +22,7 @@ policy_name = results[:policy][:name]
 
 agents.each do |agent|
   step "Verify that the tag is not associated with policy on #{agent}"
-  text = on(agent, "razor -u http://#{agent}:8080/api policies #{policy_name}").output
+  text = on(agent, "razor -u https://#{agent}:8151/api policies #{policy_name}").output
   refute_match /#{tag_name}/, text
 end
 

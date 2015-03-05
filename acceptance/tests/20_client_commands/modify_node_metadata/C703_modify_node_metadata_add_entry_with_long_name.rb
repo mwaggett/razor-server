@@ -12,14 +12,14 @@ reset_database
 razor agents, 'register-node --installed true --hw-info net0=abcdef' do |agent, output|
   node_name = /name:\s+(?<name>.+)/.match(output)[:name]
   step "Verify that the node is defined on #{agent}"
-  text = on(agent, "razor -u http://#{agent}:8080/api nodes #{node_name}").output
+  text = on(agent, "razor -u https://#{agent}:8151/api nodes #{node_name}").output
   assert_match /name: /, text
   key = long_string
   value = long_string
 
   razor agent, "modify-node-metadata --node #{node_name} --update #{key}=#{value}" do |agent|
     step "Verify that the metadata for node #{node_name} is defined on #{agent}"
-    text = on(agent, "razor -u http://#{agent}:8080/api nodes #{node_name}").output
+    text = on(agent, "razor -u https://#{agent}:8151/api nodes #{node_name}").output
     assert_match /metadata:\s+\n\s+#{key}:\s+#{value}/, text
   end
 end

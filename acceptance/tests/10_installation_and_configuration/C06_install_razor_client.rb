@@ -21,7 +21,7 @@ on agents, 'gem install pe-razor-client --no-ri'
 
 step 'Print Razor help, and check for JSON warning'
 agents.each do |agent|
-  text = on(agent, "razor -u http://#{agent}:8080/api").output
+  text = on(agent, "razor -u https://#{agent}:8151/api").output
 
   assert_match(/Usage: razor \[FLAGS\] NAVIGATION/, text,
     'The help information should be displayed')
@@ -35,7 +35,7 @@ agents.each do |agent|
 
     step "Verify JSON warning is gone"
     agents.each do |agent|
-      text = on(agent, "razor -u http://#{agent}:8080/api").output
+      text = on(agent, "razor -u https://#{agent}:8151/api").output
 
       assert_match(/Usage: razor \[FLAGS\] NAVIGATION/, text,
                    'The help information should be displayed')

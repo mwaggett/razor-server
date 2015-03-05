@@ -13,7 +13,7 @@ tag_name = 'puppet-test-tag'
 
 razor agents, 'create-tag --name ' + tag_name + ' --rule \'["=", ["fact", "processorcount"], "20520"]\'' do |agent|
   step "Verify that the tag is defined on #{agent}"
-  text = on(agent, "razor -u http://#{agent}:8080/api tags #{tag_name}").output
+  text = on(agent, "razor -u https://#{agent}:8151/api tags #{tag_name}").output
   assert_match /20520/, text
 
   razor agent, 'update-tag-rule --name ' + tag_name + ' --rule ""', nil, exit: 1 do |agent, output|

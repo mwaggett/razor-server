@@ -38,7 +38,7 @@ agents.each do |agent|
   on(agent, "mkdir -p #{hook_path}")
   create_remote_file(agent,"#{hook_path}/configuration.yaml", configurationFile)
   on(agent, "chmod +r #{hook_path}/configuration.yaml")
-  on(agent, "razor -u http://#{agent}:8080/api create-hook --name #{hook_name}" \
+  on(agent, "razor -u https://#{agent}:8151/api create-hook --name #{hook_name}" \
             " --hook-type #{hook_type} --c value=5 --c foo=newFoo --c bar=newBar", \
             :acceptable_exit_codes => [1]) do |result|
     assert_match(/500 Internal Server Error/, result.stdout, 'Create hook test failed')

@@ -43,7 +43,7 @@ agents.each do |agent|
         on agent, 'service pe-razor-server restart >&/dev/null'
 
         step "Verify authentication on #{agent}"
-        text = on(agent, "razor -u http://bad_username:bad_password@#{agent}:8080/api").output
+        text = on(agent, "razor -u https://bad_username:bad_password@#{agent}:8151/api").output
 
         assert_match(/Credentials are required/, text,
                      'The request should be unauthorized')
@@ -60,7 +60,7 @@ agents.each do |agent|
 
     step "Verify restart was successful on #{agent}"
     agents.each do |agent|
-      text = on(agent, "razor -u http://#{agent}:8080/api").output
+      text = on(agent, "razor -u https://#{agent}:8151/api").output
       assert_match(/Collections:/, text,
                    'The help information should be displayed again')
     end
