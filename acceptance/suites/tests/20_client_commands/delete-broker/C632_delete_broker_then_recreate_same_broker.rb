@@ -1,6 +1,6 @@
 # -*- encoding: utf-8 -*-
 # this is required because of the use of eval interacting badly with require_relative
-require File.expand_path(__FILE__ + '/../../../razor_helper', '.')
+require 'razor/acceptance/utils'
 
 confine :to, :platform => 'el-6-x86_64'
 confine :except, :roles => %w{master dashboard database frictionless}
