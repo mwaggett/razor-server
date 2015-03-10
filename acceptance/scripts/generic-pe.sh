@@ -25,6 +25,7 @@ bundle exec beaker \
   --keyfile $BEAKER_KEYFILE \
   --helper lib/helper.rb \
   --load-path lib \
+  --type pe \
   --preserve-hosts onfail \
   --debug \
   --timeout 360
