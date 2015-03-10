@@ -33,10 +33,12 @@ on servers, 'service iptables save'
 
 step 'add node definitions for servers to the master'
 
-if master.puppet('master')['manifest'].end_with? '.pp'
-  manifest = master.puppet('master')['manifest']
+manifest_path = master.puppet('master')['manifest']
+
+if manifest_path.end_with? '.pp'
+  manifest = manifest_path
 else
-  manifest = "#{master.puppet('master')['manifest']}/site.pp"
+  manifest = "#{manifest_path}/site.pp"
 end
 
 with_backup_of master, manifest do
@@ -49,6 +51,8 @@ cat >> #{manifest} <<EOT
 EOT
 SH
 
+  on master, "cat #{manifest}"
+  sleep(15)
   on servers, puppet('agent -t'), acceptable_exit_codes: [0,2]
 end
 

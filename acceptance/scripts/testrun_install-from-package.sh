@@ -7,7 +7,7 @@ cd $acceptance_dir
 export pe_dist_dir=http://pe-releases.puppetlabs.lan/3.7.1/
 
 export BEAKER_TESTSUITE="${2:-suites/tests/}"
-export BEAKER_PRESUITE="suites/pre_suite/pe"
+export BEAKER_PRESUITE="suites/pre_suite/install-server-from-package"
 export BEAKER_CONFIG="$script_dir/hosts.cfg"
 export BEAKER_KEYFILE="~/.ssh/id_rsa-acceptance"
 
