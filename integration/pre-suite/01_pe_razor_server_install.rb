@@ -18,7 +18,7 @@ prod_env_site_pp_path = File.join(environment_base_path, 'production', 'manifest
 #Init
 #There is a known bug (RAZOR-392) that causes the gem installation to fail for documentation.
 razor_client_gem_command = 'gem install pe-razor-client --no-ri'
-razor_api_env_command = "echo \"export RAZOR_API=http://#{razor_server_certname}:8080/api\" > /etc/profile.d/razor_env.sh"
+razor_api_env_command = "echo \"export RAZOR_API=https://#{razor_server_certname}:8151/api\" > /etc/profile.d/razor_env.sh"
 site_pp = create_site_pp(master_certname, manifest='  include pe_razor', node_def_name="'#{razor_server_certname}'")
 
 #Setup

@@ -7,7 +7,7 @@ if [ $SCRIPT_BASE_PATH = "machine_provisioning" ]; then
   cd ../../
 fi
 
-export pe_dist_dir=http://pe-releases.puppetlabs.lan/3.7.1/
+export pe_dist_dir=http://neptune.puppetlabs.lan/3.8/ci-ready/
 
 beaker \
   --config configs/centos6-razor-vcloud.cfg \

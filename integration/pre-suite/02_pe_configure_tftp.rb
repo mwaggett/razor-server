@@ -16,7 +16,7 @@ local_files_root_path = ENV['FILES'] || 'files'
 
 ipxe_fw_source_path = File.join(local_files_root_path, 'pxe', 'undionly.kpxe')
 ipxe_fw_tftp_path = File.join(tftp_root_path, 'pxelinux.0')
-ipxe_script_razor_url = "http://#{razor_server_fqdn}:8080/api/microkernel/bootstrap?nic_max=1"
+ipxe_script_razor_url = "https://#{razor_server_fqdn}:8151/api/microkernel/bootstrap?nic_max=1&http_port=8150"
 ipxe_script_path = File.join(tftp_root_path, 'default.ipxe')
 
 #Setup
@@ -24,4 +24,4 @@ step 'Copy Custom iPXE Firmware to TFTP Server'
 scp_to(razor_server, ipxe_fw_source_path, ipxe_fw_tftp_path)
 
 step 'Generate Razor iPXE Script for TFTP Server'
-curl_on(razor_server, "-o #{ipxe_script_path} #{ipxe_script_razor_url}")
+curl_on(razor_server, "-k -o #{ipxe_script_path} \"#{ipxe_script_razor_url}\"")
