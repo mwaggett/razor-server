@@ -1,12 +1,9 @@
 # -*- encoding: utf-8 -*-
 require 'tmpdir'
 
-confine :to, :platform => 'el-6-x86_64'
-
 servers = get_razor_hosts
 
 skip_test "No available razor server hosts" if servers.empty?
-
 
 test_name 'install razor-server'
 step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/3'
@@ -25,9 +22,6 @@ end
 
 step 'disable the firewall on the razor server'
 on servers, 'iptables --flush'
-
-step 'save the new firewall rules'
-on servers, 'service iptables save'
 
 step 'add node definitions for servers to the master'
 
