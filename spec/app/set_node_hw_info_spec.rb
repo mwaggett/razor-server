@@ -10,7 +10,7 @@ describe Razor::Command::SetNodeHWInfo do
   let :command_hash do
     {
         'node' => node.name,
-        'hw-info' => node_hw_hash_to_hw_info(node.hw_hash)
+        'hw_info' => node_hw_hash_to_hw_info(node.hw_hash)
     }
   end
 
@@ -46,12 +46,12 @@ describe Razor::Command::SetNodeHWInfo do
      last_response.status.should == 404
   end
 
-  it "should fail if the hw-info does not contain any match keys" do
+  it "should fail if the hw_info does not contain any match keys" do
     Razor.config['match_nodes_on'] = ['mac'] # default, but be safe!
-    command_hash['hw-info'] = {serial: '1234'}
+    command_hash['hw_info'] = {serial: '1234'}
     set_node_hw_info
     last_response.json['error'].
-      should == "hw-info must contain at least one of the match keys: mac"
+      should == "hw_info must contain at least one of the match keys: mac"
      last_response.status.should == 422
   end
 
@@ -66,7 +66,7 @@ describe Razor::Command::SetNodeHWInfo do
     before = node.hw_hash
     before.should_not == {'serial' => '1234'}
 
-    command_hash['hw-info'] = {serial: '1234'}
+    command_hash['hw_info'] = {serial: '1234'}
     set_node_hw_info
     last_response.status.should == 202
 
@@ -74,8 +74,8 @@ describe Razor::Command::SetNodeHWInfo do
     Razor::Data::Node[id: node.id].should_not == before
   end
 
-  it "should conform the old 'hw_info' syntax" do
-    command_hash['hw_info'] = command_hash.delete('hw-info')
+  it "should conform the old 'hw-info' syntax" do
+    command_hash['hw-info'] = command_hash.delete('hw_info')
     set_node_hw_info
     last_response.status.should == 202
   end

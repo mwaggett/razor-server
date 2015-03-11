@@ -16,7 +16,7 @@ Creating a simple Puppet broker:
          "server":      "puppet.example.org",
          "environment": "production"
       },
-      "broker-type": "puppet"
+      "broker_type": "puppet"
     }
   EOT
 
@@ -35,16 +35,16 @@ Creating a simple Puppet broker:
     which broker the node will be handed off via after installation.
   HELP
 
-  attr 'broker-type', required: true, type: String, references: [Razor::BrokerType, :name],
+  attr 'broker_type', required: true, type: String, references: [Razor::BrokerType, :name],
                       help: _(<<-HELP)
     The broker type from which this broker is created.  The available
     broker types on your server are:
 #{Razor::BrokerType.all.map{|n| "    - #{n}" }.join("\n")}
   HELP
 
-  object 'configuration', help: _(<<-HELP) do
+  object 'configuration', alias: 'c', help: _(<<-HELP) do
     The configuration for the broker.  The acceptable values here are
-    determined by the `broker-type` selected.  In general this has
+    determined by the `broker_type` selected.  In general this has
     settings like which server to contact, and other configuration
     related to handing on the newly installed system to the final
     configuration management system.
@@ -55,17 +55,9 @@ Creating a simple Puppet broker:
   end
 
   def run(request, data)
-    type = data.delete("broker-type")
-    data["broker_type"] = Razor::BrokerType.find(name: type)
+    data["broker_type"] = Razor::BrokerType.find(name: data.delete("broker_type"))
 
     Razor::Data::Broker.import(data).first
-  end
-
-  def self.conform!(data)
-    data.tap do |_|
-      # Allow "c" as a shorthand.
-      add_hash_alias(data, 'configuration', 'c')
-    end
   end
 end
 
