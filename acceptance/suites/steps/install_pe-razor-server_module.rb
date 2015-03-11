@@ -3,9 +3,7 @@ require 'tmpdir'
 
 confine :to, :platform => 'el-6-x86_64'
 
-servers = agents.select do |node|
-  (node['roles'] & %w{master dashboard database frictionless}).empty?
-end
+servers = get_razor_hosts
 
 skip_test "No available razor server hosts" if servers.empty?
 
@@ -52,7 +50,11 @@ EOT
 SH
 
   on master, "cat #{manifest}"
-  sleep(15)
+
+  # restart the puppet service to flush the environment cache and ensure the
+  # following agent run receives a catalog that reflects the changes we made to
+  # the master's site.pp
+  bounce_service( master, master['puppetservice'] )
   on servers, puppet('agent -t'), acceptable_exit_codes: [0,2]
 end
 

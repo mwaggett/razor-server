@@ -1,2 +1,5 @@
 step "Install PE Razor Server"
-  install_pe_razor_server master
+  razor_hosts = get_razor_hosts
+  razor_hosts.each do |host|
+    install_pe_razor_server host
+  end

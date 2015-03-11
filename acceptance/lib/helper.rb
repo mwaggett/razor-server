@@ -46,6 +46,14 @@ module RazorExtensions
     value
   end
 
+  def get_razor_hosts
+    servers = agents.select do |node|
+      (node['roles'] & %w{master dashboard database frictionless}).empty?
+    end
+
+    return servers
+  end
+
   def install_pe_razor_server (host)
     case test_config[:pe_razor_server_install_type]
     when :package
