@@ -122,8 +122,8 @@ install -d %{buildroot}%{_tmpfilesdir}
 install -m0644 ext/redhat/%{name}-tmpfiles.conf %{buildroot}%{_tmpfilesdir}/%{name}.conf
 %else
 cp -pr  ext/redhat/pe-razor-server.init %{buildroot}%{_initrddir}/pe-razor-server
-cp -pr  ext/redhat/pe-razor-server.sysconfig %{buildroot}/etc/sysconfig/pe-razor-server
 %endif
+cp -pr  ext/redhat/pe-razor-server.sysconfig %{buildroot}/etc/sysconfig/pe-razor-server
 
 # Clean up packaging artifacts to prevent weird dependencies
 rm -rf ext/debian ext/redhat ext/build_defaults.yaml ext/packaging.rake ext/project_data.yaml
@@ -239,9 +239,9 @@ rm -rf %{buildroot}
 %attr(-,%{_service_name},%{_service_name}) %dir /run/%{name}/
 %{_tmpfilesdir}/%{name}.conf
 %else
-/etc/sysconfig/%{name}
 %{_initrddir}/%{name}
 %endif
+/etc/sysconfig/%{name}
 %doc doc README.md
 
 %changelog

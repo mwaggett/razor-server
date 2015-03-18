@@ -1,11 +1,6 @@
+# The location of the razor config files
 RAZOR_CONFIG=/etc/puppetlabs/razor/config.yaml
 RAZOR_CONFIG_DEFAULTS=/opt/puppet/razor/config-defaults.yaml
-export RAZOR_CONFIG
-export RAZOR_CONFIG_DEFAULTS
-
-JAVA=/opt/puppet/bin/java
-export JAVA
-
+# The ports that the razor-server service should listen on
 HTTP_PORT=8150
 HTTPS_PORT=8151
-export HTTP_PORT HTTPS_PORT
