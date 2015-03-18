@@ -1,5 +1,7 @@
 RAZOR_CONFIG=/etc/puppetlabs/razor/config.yaml
+RAZOR_CONFIG_DEFAULTS=/opt/puppet/razor/config-defaults.yaml
 export RAZOR_CONFIG
+export RAZOR_CONFIG_DEFAULTS
 
 JAVA=/opt/puppet/bin/java
 export JAVA
