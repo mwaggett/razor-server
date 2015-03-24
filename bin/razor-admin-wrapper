@@ -20,7 +20,14 @@ export JRUBY_HOME="${torquebox}/jruby"
 # Load the sysconfig file for pe-razor-server,
 # to get the RAZOR_CONFIG setting.
 if [ -e /etc/sysconfig/pe-razor-server ]; then
+  # Enable variable auto-exporting when we source the
+  # sysconfig file so that the exec below doesn't drop
+  # the variables set here. We can't export the vars
+  # inside the sysconfig file due to the way systemd
+  # parses the file.
+  set -a
   . /etc/sysconfig/pe-razor-server
+  set +a
 fi
 
 # Figure out what we were asked to execute.
