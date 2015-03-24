@@ -1,7 +1,6 @@
 # -*- encoding: utf-8 -*-
 # this is required because of the use of eval interacting badly with require_relative
 require 'razor/acceptance/utils'
-confine :to, :platform => 'el-6-x86_64'
 confine :except, :roles => %w{master dashboard database frictionless}
 
 test_name 'Move policy before a different policy with a long unicode name'
