@@ -1,5 +1,5 @@
 # -*- encoding: utf-8 -*-
-confine :to, :platform => 'el-6-x86_64'
+confine :to, :platform => ['el-6-x86_64', 'el-7-x86_64']
 confine :except, :roles => %w{master dashboard database frictionless}
 
 test_name 'Install Razor Client'
