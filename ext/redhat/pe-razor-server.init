@@ -7,15 +7,15 @@
 # processname: standalone
 # pidfile: /var/run/pe-razor-server.pid
 
-JAVA=/opt/puppet/bin/java
 NAME="pe-razor-server"
 WAIT=30 # seconds
 
 # Set defaults.
+JAVA="/opt/puppet/bin/java"
 TORQUEBOX_HOME="/opt/puppet/share/torquebox"
 JBOSS_HOME="${TORQUEBOX_HOME}/jboss"
 JRUBY_HOME="${TORQUEBOX_HOME}/jruby"
-export TORQUEBOX_HOME JBOSS_HOME JRUBY_HOME
+export JAVA TORQUEBOX_HOME JBOSS_HOME JRUBY_HOME
 
 PATH="${JRUBY_HOME}/bin:${PATH}"
 export PATH
@@ -43,7 +43,14 @@ export LANG=en_US.UTF-8
 
 # Load overrides and defaults. Fail if it isn't there.
 [ -e "/etc/sysconfig/${NAME}" ] || exit 1
+# Enable variable auto-exporting when we source the
+# sysconfig file so that the exec below doesn't drop
+# the variables set here. We can't export the vars
+# inside the sysconfig file due to the way systemd
+# parses the file.
+set -a
 [ -e "/etc/sysconfig/${NAME}" ] && . "/etc/sysconfig/${NAME}"
+set +a
 
 start() {
     echo -n "Launching ${NAME}: "

@@ -1,7 +1,6 @@
 # -*- encoding: utf-8 -*-
 # this is required because of the use of eval interacting badly with require_relative
 require 'razor/acceptance/utils'
-confine :to, :platform => 'el-6-x86_64'
 confine :except, :roles => %w{master dashboard database frictionless}
 
 test_name "C553 Create Policy with missing tasks configuration parameter"
@@ -38,7 +37,8 @@ json = {
   "tags"          => ["small"]
 }
 
-razor agents, 'create-policy', json, exit: 1 do |agent, text|
-  assert_match /422 Unprocessable Entity/, text
-  assert_match /task is a required attribute, but it is not present/, text
+razor agents, 'create-policy', json do |agent, text|
+  step "Verify that the policy uses the repo's task on #{agent}"
+  text = on(agent, "razor -u https://#{agent}:8151/api policies centos-for-small").output
+  assert_match /task:\s+centos/, text
 end

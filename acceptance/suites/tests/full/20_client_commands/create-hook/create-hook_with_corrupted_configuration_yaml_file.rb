@@ -2,7 +2,6 @@
 # this is required because of the use of eval interacting badly with require_relative
 require 'razor/acceptance/utils'
 require 'yaml'
-confine :to, :platform => 'el-6-x86_64'
 confine :except, :roles => %w{master dashboard database frictionless}
 
 test_name 'QA-1820 - C59748 - create-hook with corrupted configuration.yaml file'

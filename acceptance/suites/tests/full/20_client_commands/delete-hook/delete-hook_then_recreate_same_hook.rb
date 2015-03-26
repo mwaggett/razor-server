@@ -1,11 +1,11 @@
 # -*- encoding: utf-8 -*-
 # this is required because of the use of eval interacting badly with require_relative
-require 'razor/acceptance/utils'
+#require 'razor_helper'
 require 'yaml'
 confine :except, :roles => %w{master dashboard database frictionless}
 
-test_name 'QA-1820 - C59740 - create-hook with same name as existing hook'
-step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/59740'
+test_name 'QA-1821 - C59734 - delete hook then recreate same hook'
+step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/59734'
 
 hook_dir      = '/opt/puppet/share/razor-server/hooks'
 hook_type     = 'hook_type_1'
@@ -15,7 +15,7 @@ hook_path     = "#{hook_dir}/#{hook_type}.hook"
 teardown do
   agents.each do |agent|
     on(agent, "test -e #{hook_dir}.bak && mv #{hook_dir}.bak  #{hook_dir} || rm -rf #{hook_dir}")
-    on(agent, "razor -u https://#{agent}:8151/api delete-hook --name #{hook_name}")
+    on(agent, "razor -u https://#{agent}.delivery.puppetlabs.net:8151/api delete-hook --name #{hook_name}")
   end
 end
 
@@ -43,25 +43,29 @@ agents.each do |agent|
   on(agent, "mkdir -p #{hook_path}")
   create_remote_file(agent,"#{hook_path}/configuration.yaml", configurationFile)
   on(agent, "chmod +r #{hook_path}/configuration.yaml")
-  on(agent, "razor -u https://#{agent}:8151/api create-hook --name #{hook_name}" \
+  on(agent, "razor -u https://#{agent}.delivery.puppetlabs.net:8151/api create-hook --name #{hook_name}" \
             " --hook-type #{hook_type} --c value=5 --c foo=newFoo --c bar=newBar")
 
   step 'Verify if the hook is successfully created:'
-  on(agent, "razor -u https://razor-razor@#{agent}:8151/api hooks") do |result|
-    assert_match(/name: #{hook_name}/, result.stdout, 'razor create-hook failed')
+  on(agent, "razor -u https://#{agent}.delivery.puppetlabs.net:8151/api hooks") do |result|
+    assert_match(/#{hook_name}/, result.stdout, 'razor create-hook failed')
   end
 
-  # due to RAZOR-491, this is NOT a invalid test case, and the same create-hook command
-  # with same parameters will result in a single entity.
-  step "Create a new hook with same name as existing hook #{hook_name}"
-  on(agent, "razor -u https://#{agent}:8151/api create-hook --name #{hook_name}" \
+  step 'Delete the newly created hook'
+  on(agent, "razor -u https://#{agent}.delivery.puppetlabs.net:8151/api delete-hook --name #{hook_name}") do |result|
+    assert_match(/result: hook #{hook_name} destroyed/, result.stdout, 'test failed')
+  end
+
+  step "Verify that hook #{hook_name} is no longer defined on #{agent}"
+  text = on(agent, "razor -u https://#{agent}.delivery.puppetlabs.net:8151/api hooks").output
+  refute_match /#{hook_name}/, text
+
+  step "Create a new hook with same name as the newly deleted hook:  '#{hook_name}'"
+  on(agent, "razor -u https://#{agent}.delivery.puppetlabs.net:8151/api create-hook --name #{hook_name}" \
             " --hook-type #{hook_type} --c value=5 --c foo=newFoo --c bar=newBar")
 
-  # Run the command again with different config parameters and verify it reports a conflict.
-  step "Create a hook with same name and different config parameters"
-  on(agent, "razor -u https://#{agent}:8151/api create-hook --name #{hook_name}" \
-            " --hook-type #{hook_type} --c value=7 --c foo=differentfoo --c bar=differentBar", \
-            :acceptable_exit_codes => [1]) do |result|
-    assert_match(/error: The hook #{hook_name} already exists, and the configuration fields do not match/, result.stdout, 'Test failed')
-  end
+  step "Create a new hook with same name as existing hook #{hook_name}"
+  on(agent, "razor -u https://#{agent}.delivery.puppetlabs.net:8151/api create-hook --name #{hook_name}" \
+            " --hook-type #{hook_type} --c value=5 --c foo=newFoo --c bar=newBar")
+
 end

@@ -2,7 +2,6 @@
 # this is required because of the use of eval interacting badly with require_relative
 require 'razor/acceptance/utils'
 require 'yaml'
-confine :to, :platform => 'el-6-x86_64'
 confine :except, :roles => %w{master dashboard database frictionless}
 
 test_name 'QA-1820 - C59744 - create-hook non-existing hook type'
@@ -46,6 +45,6 @@ agents.each do |agent|
   on(agent, "razor -u https://#{agent}:8151/api create-hook --name #{hook_name}" \
             " --hook-type non-existing-hook-type", \
             :acceptable_exit_codes => [1]) do |result|
-    assert_match(/error: hook-type must be the name of an existing hook type, but is/, result.stdout, 'test failed!')
+    assert_match(/error: hook_type must be the name of an existing hook type, but is/, result.stdout, 'test failed!')
   end
 end

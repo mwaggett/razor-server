@@ -2,7 +2,6 @@
 # this is required because of the use of eval interacting badly with require_relative
 require 'razor/acceptance/utils'
 require 'yaml'
-confine :to, :platform => %w{el-6-x86_64 el-7-x86_64}
 confine :except, :roles => %w{master dashboard database frictionless}
 
 test_name 'Enable auth and authenticate with bad user and good password'
