@@ -11,7 +11,7 @@ reset_database
 names = razor agents, 'register-node --installed true --hw-info \'{"net0": "abcdef"}\'' do |agent, output|
   name = /name:\s+(?<name>.+)/.match(output)[:name]
   step "Verify that the node is defined on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api --full nodes #{name}").output
+  text = on(agent, "razor -u https://#{agent}:8151/api nodes #{name} --full").output
   assert_match /abcdef/, text
 
   razor agent, 'delete-node --name ' + name do |agent|
