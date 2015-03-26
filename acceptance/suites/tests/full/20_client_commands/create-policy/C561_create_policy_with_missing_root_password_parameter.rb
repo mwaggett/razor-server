@@ -40,5 +40,5 @@ json = {
 
 razor agents, 'create-policy', json, exit: 1 do |agent, text|
   assert_match /422 Unprocessable Entity/, text
-  assert_match /root-password is a required attribute, but it is not present/, text
+  assert_match /root_password is a required attribute, but it is not present/, text
 end

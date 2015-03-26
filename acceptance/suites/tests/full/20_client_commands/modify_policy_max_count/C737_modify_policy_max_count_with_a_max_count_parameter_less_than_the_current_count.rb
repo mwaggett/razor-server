@@ -11,5 +11,5 @@ reset_database
 results = create_policy agents
 
 razor agents, "modify-policy-max-count --name #{results[:policy][:name]} --max-count -5", nil, exit:1 do |agent, output|
-  assert_match /There are currently 0 nodes bound to this policy. Cannot lower max-count to -5/, output
+  assert_match /There are currently 0 nodes bound to this policy. Cannot lower max_count to -5/, output
 end

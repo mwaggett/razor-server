@@ -16,6 +16,6 @@ json = {
 }
 
 razor agents, 'create-broker', json, exit: 1 do |agent, text|
-  assert_match(/broker-type must be the name of an existing broker type, but is 'wrong-type'/, text)
+  assert_match(/broker_type must be the name of an existing broker type, but is 'wrong-type'/, text)
 end
 

@@ -9,5 +9,5 @@ step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/599'
 reset_database
 
 razor agents, 'create-repo --name puppet-test-repo --task centos', nil, exit: 1 do |agent, output|
-  assert_match /the command requires one out of the iso-url, url attributes to be supplied/, output
+  assert_match /the command requires one out of the iso_url, no_content, url attributes to be supplied/, output
 end

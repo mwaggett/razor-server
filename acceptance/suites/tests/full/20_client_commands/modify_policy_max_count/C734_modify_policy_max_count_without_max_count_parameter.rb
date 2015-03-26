@@ -11,5 +11,5 @@ reset_database
 results = create_policy agents
 
 razor agents, "modify-policy-max-count --name #{results[:policy][:name]}", nil, exit:1 do |agent, output|
-  assert_match /max-count is a required attribute, but it is not present/, output
+  assert_match /max_count is a required attribute, but it is not present/, output
 end

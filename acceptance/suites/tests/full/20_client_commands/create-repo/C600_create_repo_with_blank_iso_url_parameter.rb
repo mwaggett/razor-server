@@ -9,5 +9,5 @@ step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/600'
 reset_database
 
 razor agents, 'create-repo --name puppet-test-repo --task centos --iso-url ""', nil, exit: 1 do |agent, output|
-  assert_match /iso-url must be between 1 and 1000 characters in length, but is 0 characters long/, output
+  assert_match /iso_url must be between 1 and 1000 characters in length, but is 0 characters long/, output
 end

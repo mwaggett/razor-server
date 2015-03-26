@@ -45,6 +45,6 @@ agents.each do |agent|
   on(agent, "razor -u https://#{agent}:8151/api create-hook --name #{hook_name}" \
             " --hook-type non-existing-hook-type", \
             :acceptable_exit_codes => [1]) do |result|
-    assert_match(/error: hook-type must be the name of an existing hook type, but is/, result.stdout, 'test failed!')
+    assert_match(/error: hook_type must be the name of an existing hook type, but is/, result.stdout, 'test failed!')
   end
 end

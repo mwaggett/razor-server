@@ -41,5 +41,5 @@ json = {
 
 razor agents, 'create-policy', json, exit: 1 do |agent, text|
   assert_match /422 Unprocessable Entity/, text
-  assert_match /max-count should be a number, but was actually a string/, text
+  assert_match /max_count should be a number, but was actually a string/, text
 end
