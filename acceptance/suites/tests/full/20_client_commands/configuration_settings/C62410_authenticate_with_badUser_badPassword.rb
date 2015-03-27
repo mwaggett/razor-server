@@ -14,7 +14,7 @@ teardown do
   agents.each do |agent|
     on(agent, "test -e #{config_yaml_bak} && mv #{config_yaml_bak} #{config_yaml} || rm #{config_yaml}")
     on(agent, "chmod +r #{config_yaml}")
-    on(agent, 'service pe-razor-server restart >&/dev/null')
+    restart_razor_service(agent)
   end
 end
 
@@ -41,7 +41,7 @@ agents.each do |agent|
   step "Restart Razor Service on #{agent}"
   # the redirect to /dev/null is to work around a bug in the init script or
   # service, per: https://tickets.puppetlabs.com/browse/RAZOR-247
-  on agent, 'service pe-razor-server restart >&/dev/null'
+  restart_razor_service(agent)
 
   step 'C62410: Authenticate to razor server #{agent} with bad user and bad password'
   on(agent, "razor -u https://badUser:badPassword@#{agent}:8151/api") do |result|

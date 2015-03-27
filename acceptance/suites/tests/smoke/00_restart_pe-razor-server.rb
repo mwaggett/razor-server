@@ -7,7 +7,7 @@ step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/8'
 step 'Restart Razor Service'
 # the redirect to /dev/null is to work around a bug in the init script or
 # service, per: https://tickets.puppetlabs.com/browse/RAZOR-247
-on agents, 'service pe-razor-server restart >&/dev/null'
+restart_razor_service(agents)
 
 step 'Verify restart was successful'
 agents.each do |agent|

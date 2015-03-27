@@ -18,7 +18,7 @@ teardown do
     on(agent, "test -e #{config_yaml_bak} && mv #{config_yaml_bak} #{config_yaml} || rm #{config_yaml}")
     on(agent, "test -e #{shiro_ini_bak} && mv #{shiro_ini_bak} #{shiro_ini} || rm #{shiro_ini}")
     on(agent, "chmod +r #{config_yaml} #{shiro_ini}")
-    on(agent, 'service pe-razor-server restart >&/dev/null')
+    restart_razor_service(agent)
   end
 end
 
@@ -50,7 +50,7 @@ agents.each do |agent|
   end
 
   step "Restart Razor Service on #{agent}"
-  on agent, 'service pe-razor-server restart >&/dev/null'
+  restart_razor_service(agent)
 
   step 'C59697: Authenticate to razor server #{agent} with newly created credentials'
   on(agent, "razor -u https://newUser:newPassword@#{agent}:8151/api") do |result|

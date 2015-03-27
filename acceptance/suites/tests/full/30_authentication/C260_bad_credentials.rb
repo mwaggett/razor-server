@@ -39,7 +39,7 @@ agents.each do |agent|
         step "Restart Razor Service on #{agent}"
         # the redirect to /dev/null is to work around a bug in the init script or
         # service, per: https://tickets.puppetlabs.com/browse/RAZOR-247
-        on agent, 'service pe-razor-server restart >&/dev/null'
+        restart_razor_service(agent)
 
         step "Verify authentication on #{agent}"
         text = on(agent, "razor -u https://bad_username:bad_password@#{agent}:8151/api").output
@@ -55,7 +55,7 @@ agents.each do |agent|
     step "Restart Razor Service to revert authentication on #{agent}"
     # the redirect to /dev/null is to work around a bug in the init script or
     # service, per: https://tickets.puppetlabs.com/browse/RAZOR-247
-    on agent, 'service pe-razor-server restart >&/dev/null'
+    restart_razor_service(agent)
 
     step "Verify restart was successful on #{agent}"
     agents.each do |agent|

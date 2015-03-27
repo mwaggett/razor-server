@@ -135,6 +135,17 @@ module RazorExtensions
         host.logger.notify("No repository installation step for #{platform} yet...")
     end
   end
+
+  def restart_razor_service(servers)
+    servers = Array(servers)
+    servers.each do |server|
+      on server, 'service pe-razor-server restart >&/dev/null'
+      step 'Verify that the port is open'
+      unless port_open_within?(server, 8151, 60)
+        raise RuntimeError, "server #{server} did not start back up"
+      end
+    end
+  end
 end
 
 Beaker::TestCase.send(:include, RazorExtensions)
