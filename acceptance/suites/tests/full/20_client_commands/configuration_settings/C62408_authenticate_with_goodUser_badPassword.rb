@@ -34,7 +34,7 @@ agents.each do |agent|
     step "Restart Razor Service on #{agent}"
     # the redirect to /dev/null is to work around a bug in the init script or
     # service, per: https://tickets.puppetlabs.com/browse/RAZOR-247
-    restart_razor_service(agent)
+    restart_razor_service(agent, "https://razor:razor@#{agent}:8151/api")
 
     step 'C62408: Authenticate to razor server #{agent} with correct user and wrong password'
     on(agent, "razor -u https://razor:wrongPassword@#{agent}:8151/api", acceptable_exit_codes: 1) do |result|

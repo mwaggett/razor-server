@@ -136,14 +136,16 @@ module RazorExtensions
     end
   end
 
-  def restart_razor_service(servers)
-    servers = Array(servers)
-    servers.each do |server|
-      on server, 'service pe-razor-server restart >&/dev/null'
-      step 'Verify that the port is open'
-      unless port_open_within?(server, 8151, 60)
-        raise RuntimeError, "server #{server} did not start back up"
-      end
+  def restart_razor_service(server, test_url = nil)
+    test_command = if test_url.nil? then 'razor' else "razor -u '#{test_url}'" end
+    on server, 'service pe-razor-server restart >&/dev/null'
+    step 'Verify that the port is open'
+    unless port_open_within?(server, 8151, 60)
+      raise RuntimeError, "server #{server} did not start back up"
+    end
+    unless retry_on(server, test_command,
+                    :max_retries => 30, :retry_interval => 5)
+      raise RuntimeError, "server #{server} did not start back up"
     end
   end
 
