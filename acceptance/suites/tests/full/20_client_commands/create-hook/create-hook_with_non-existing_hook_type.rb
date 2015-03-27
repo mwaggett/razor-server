@@ -14,13 +14,13 @@ hook_path     = "#{hook_dir}/#{hook_type}.hook"
 
 teardown do
   agents.each do |agent|
-    on(agent, "test -e #{hook_dir}.bak && mv #{hook_dir}.bak  #{hook_dir} || rm -rf #{hook_dir}")
+    on(agent, "test -e #{hook_dir}.bak && rm -rf #{hook_dir} && mv #{hook_dir}.bak #{hook_dir}")
   end
 end
 
 step "Backup #{hook_dir}"
 agents.each do |agent|
-  on(agent, "test -e #{hook_dir} && cp #{hook_dir} #{hook_dir}.bak} || true")
+  on(agent, "test -e #{hook_dir} && cp -r #{hook_dir} #{hook_dir}.bak")
 end
 
 configurationFile =<<-EOF
@@ -42,7 +42,7 @@ agents.each do |agent|
   on(agent, "mkdir -p #{hook_path}")
   create_remote_file(agent,"#{hook_path}/configuration.yaml", configurationFile)
   on(agent, "chmod +r #{hook_path}/configuration.yaml")
-  on(agent, "razor -u https://#{agent}:8151/api create-hook --name #{hook_name}" \
+  on(agent, "razor create-hook --name #{hook_name}" \
             " --hook-type non-existing-hook-type", \
             :acceptable_exit_codes => [1]) do |result|
     assert_match(/error: hook_type must be the name of an existing hook type, but is/, result.stdout, 'test failed!')

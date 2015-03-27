@@ -26,7 +26,7 @@ json = {
 
 razor agents, 'create-task', json do |agent|
   step "Verify that the task is defined on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api tasks new-task").output
+  text = on(agent, "razor tasks new-task").output
   assert_match /name:\s*new-task/, text
 end
 

@@ -16,7 +16,7 @@ json = {
 }
 razor agents, 'create-tag', json do |agent|
   step "Verify that the tag is defined on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api tags '#{tag_name}'").output
+  text = on(agent, "razor tags '#{tag_name}'").output
   assert_match /20520/, text
 
   json = {
@@ -25,7 +25,7 @@ razor agents, 'create-tag', json do |agent|
   }
   razor agent, 'update-tag-rule', json do |agent|
     step "Verify that the tag is updated on #{agent}"
-    text = on(agent, "razor -u https://#{agent}:8151/api tags '#{tag_name}'").output
+    text = on(agent, "razor tags '#{tag_name}'").output
     assert_match /454545/, text
   end
 end

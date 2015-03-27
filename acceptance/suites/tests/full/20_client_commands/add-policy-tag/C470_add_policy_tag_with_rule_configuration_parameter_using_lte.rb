@@ -15,6 +15,6 @@ policy_name = results[:policy][:name]
 
 razor agents, "add-policy-tag --name #{policy_name} --tag #{tag_name} --rule " + '\'["lte", 1, 1]\'' do |agent|
   step "Verify that the tag is associated with policy on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api policies #{policy_name}").output
+  text = on(agent, "razor policies #{policy_name}").output
   assert_match /#{tag_name}/, text
 end

@@ -39,6 +39,6 @@ json = {
 
 razor agents, 'create-policy', json do |agent, text|
   step "Verify that the policy uses the repo's task on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api policies centos-for-small").output
+  text = on(agent, "razor policies centos-for-small").output
   assert_match /task:\s+centos/, text
 end

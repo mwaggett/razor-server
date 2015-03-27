@@ -19,12 +19,12 @@ json = {
 
 agents.each do |agent|
   step "Test empty query results on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api brokers").output
+  text = on(agent, "razor brokers").output
   assert_match /There are no items for this query./, text
 end
 
 razor agents, 'create-broker', json do |agent|
   step "Test single entry in query results"
-  text = on(agent, "razor -u https://#{agent}:8151/api brokers").output
+  text = on(agent, "razor brokers").output
   assert_match /puppet-test-broker/, text
 end

@@ -10,6 +10,6 @@ reset_database
 
 razor agents, 'create-repo --name puppet-test-repo --iso-url "file:///this/directory/does/not/exist/yet" --task centos' do |agent|
   step "Verify that the repo is defined on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api repos").output
+  text = on(agent, "razor repos").output
   assert_match /puppet-test-repo/, text
 end

@@ -10,12 +10,12 @@ reset_database
 result = create_policy agents, policy_max_count: 5
 
 agents.each do |agent|
-  text = on(agent, "razor -u https://#{agent}:8151/api policies puppet-test-policy").output
+  text = on(agent, "razor policies puppet-test-policy").output
   assert_match /max_count:\s+5/, text
 end
 
 razor agents, "modify-policy-max-count --name #{result[:policy][:name]} --max-count" do |agent|
   step "Verify that the count was increased on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api policies #{result[:policy][:name]}").output
+  text = on(agent, "razor policies #{result[:policy][:name]}").output
   assert_match /max_count:\s+nil/, text
 end

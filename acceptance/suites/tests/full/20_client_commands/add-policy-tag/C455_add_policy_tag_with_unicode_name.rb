@@ -16,7 +16,7 @@ json = {
 }
 razor agents, 'create-tag', json do |agent|
   step "Verify that the tag is defined on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api tags").output
+  text = on(agent, "razor tags").output
   assert_match /#{Regexp.escape(tag_name)}/, text
 end
 
@@ -25,7 +25,7 @@ policy_name = results[:policy][:name]
 
 agents.each do |agent|
   step "Verify that the tag is not associated with policy on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api policies #{policy_name}").output
+  text = on(agent, "razor policies #{policy_name}").output
   refute_match /#{Regexp.escape(tag_name)}/, text
 end
 
@@ -35,6 +35,6 @@ json = {
 }
 razor agents, 'add-policy-tag', json do |agent|
   step "Verify that the tag is associated with policy on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api policies #{policy_name}").output
+  text = on(agent, "razor policies #{policy_name}").output
   assert_match /#{Regexp.escape(tag_name)}/, text
 end

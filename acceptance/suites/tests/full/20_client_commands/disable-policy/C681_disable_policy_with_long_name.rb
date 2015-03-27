@@ -13,12 +13,12 @@ name = result[:policy][:name]
 
 agents.each do |agent|
   step "Verify that the policy is defined on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api policies #{name}").output
+  text = on(agent, "razor policies #{name}").output
   assert_match /enabled:\s+true/, text
 end
 
 razor agents, 'disable-policy --name ' + name do |agent|
   step "Verify that the policy is disabled on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api policies #{name}").output
+  text = on(agent, "razor policies #{name}").output
   assert_match /enabled:\s+false/, text
 end

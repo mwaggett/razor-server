@@ -135,6 +135,34 @@ module RazorExtensions
         host.logger.notify("No repository installation step for #{platform} yet...")
     end
   end
+
+  def restart_razor_service(server, test_url = nil)
+    test_command = if test_url.nil? then 'razor' else "razor -u '#{test_url}'" end
+    on server, 'service pe-razor-server restart >&/dev/null'
+    step 'Verify that the port is open'
+    unless port_open_within?(server, 8151, 60)
+      raise RuntimeError, "server #{server} did not start back up"
+    end
+    unless retry_on(server, test_command,
+                    :max_retries => 30, :retry_interval => 5)
+      raise RuntimeError, "server #{server} did not start back up"
+    end
+  end
+
+  def with_backup_of(host, file, &block)
+    Dir.mktmpdir('beaker-razor-tmp') do |tmpdir|
+      scp_from host, file, tmpdir
+      begin
+        block and case block.arity
+                  when 0 then yield
+                  when 1 then yield tmpdir
+                  end
+      ensure
+        scp_to host, File::join(tmpdir, File.basename(file)), File.dirname(file)
+        on host, "chmod +r '#{file}'"
+      end
+    end
+  end
 end
 
 Beaker::TestCase.send(:include, RazorExtensions)

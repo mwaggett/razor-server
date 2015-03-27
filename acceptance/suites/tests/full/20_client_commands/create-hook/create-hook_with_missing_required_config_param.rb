@@ -14,13 +14,13 @@ hook_path     = "#{hook_dir}/#{hook_type}.hook"
 
 teardown do
   agents.each do |agent|
-    on(agent, "test -e #{hook_dir}.bak && mv #{hook_dir}.bak  #{hook_dir} || rm -rf #{hook_dir}")
+    on(agent, "test -e #{hook_dir}.bak && rm -rf #{hook_dir} && mv #{hook_dir}.bak #{hook_dir}")
   end
 end
 
 step "Backup #{hook_dir}"
 agents.each do |agent|
-  on(agent, "test -e #{hook_dir} && cp #{hook_dir} #{hook_dir}.bak} || true")
+  on(agent, "test -e #{hook_dir} && cp -r #{hook_dir} #{hook_dir}.bak")
 end
 
 configurationFile =<<-EOF
@@ -44,7 +44,7 @@ agents.each do |agent|
   on(agent, "chmod +r #{hook_path}/configuration.yaml")
 
   step 'create hook with  missing hook configuration attr'
-  on(agent, "razor -u https://#{agent}:8151/api create-hook --name #{hook_name}" \
+  on(agent, "razor create-hook --name #{hook_name}" \
             " --hook-type #{hook_type}", :acceptable_exit_codes => [1]) do |result| \
         assert_match %r(error: configuration key 'value' is required by this hook type, but was not supplied), result.stdout
   end
