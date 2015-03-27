@@ -14,13 +14,13 @@ hook_path     = "#{hook_dir}/#{hook_type}.hook"
 
 teardown do
   agents.each do |agent|
-    on(agent, "test -e #{hook_dir}.bak && mv #{hook_dir}.bak #{hook_dir}")
+    on(agent, "test -e #{hook_dir}.bak && rm -rf #{hook_dir} && mv #{hook_dir}.bak #{hook_dir}")
   end
 end
 
 step "Backup #{hook_dir}"
 agents.each do |agent|
-  on(agent, "test -e #{hook_dir} && cp #{hook_dir} #{hook_dir}.bak")
+  on(agent, "test -e #{hook_dir} && cp -r #{hook_dir} #{hook_dir}.bak")
 end
 
 configurationFile =<<-EOF
