@@ -42,7 +42,7 @@ agents.each do |agent|
   on(agent, "mkdir -p #{hook_path}")
   create_remote_file(agent,"#{hook_path}/configuration.yaml", configurationFile)
   on(agent, "chmod +r #{hook_path}/configuration.yaml")
-  on(agent, "razor -u https://#{agent}:8151/api create-hook --name #{hook_name}" \
+  on(agent, "razor create-hook --name #{hook_name}" \
             " --hook-type non-existing-hook-type", \
             :acceptable_exit_codes => [1]) do |result|
     assert_match(/error: hook_type must be the name of an existing hook type, but is/, result.stdout, 'test failed!')

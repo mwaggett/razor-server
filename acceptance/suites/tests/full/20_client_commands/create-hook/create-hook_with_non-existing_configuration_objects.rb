@@ -43,7 +43,7 @@ agents.each do |agent|
   on(agent, "mkdir -p #{hook_path}")
   create_remote_file(agent,"#{hook_path}/configuration.yaml", configurationFile)
   on(agent, "chmod +r #{hook_path}/configuration.yaml")
-  on(agent, "razor -u https://#{agent}:8151/api create-hook --name #{hook_name}" \
+  on(agent, "razor create-hook --name #{hook_name}" \
             " --hook-type #{hook_type} --c non-existing-object=aValue", \
           :acceptable_exit_codes => [1]) do |result|
     assert_match(/error: configuration key \'non-existing-object\' is not defined for this hook type/, result.stdout, 'test failed!')

@@ -15,7 +15,7 @@ hook_path     = "#{hook_dir}/#{hook_type}.hook"
 teardown do
   agents.each do |agent|
     on(agent, "test -e #{hook_dir}.bak && mv #{hook_dir}.bak  #{hook_dir} || rm -rf #{hook_dir}")
-    on(agent, "razor -u https://#{agent}:8151/api delete-hook --name #{hook_name}")
+    on(agent, "razor delete-hook --name #{hook_name}")
   end
 end
 
@@ -43,11 +43,11 @@ agents.each do |agent|
   on(agent, "mkdir -p #{hook_path}")
   create_remote_file(agent,"#{hook_path}/configuration.yaml", configurationFile)
   on(agent, "chmod +r #{hook_path}/configuration.yaml")
-  on(agent, "razor -u https://#{agent}:8151/api create-hook --name #{hook_name}" \
+  on(agent, "razor create-hook --name #{hook_name}" \
             " --hook-type #{hook_type} --c value=5 --c foo=newFoo --c bar=newBar")
 
   step 'Verify if the hook is successfully created:'
   on(agent, "razor -u https://razor-razor@#{agent}:8151/api hooks") do |result|
-    assert_match(/name: #{hook_name}/, result.stdout, 'razor create-hook failed')
+    assert_match(/#{hook_name}/, result.stdout, 'razor create-hook failed')
   end
 end

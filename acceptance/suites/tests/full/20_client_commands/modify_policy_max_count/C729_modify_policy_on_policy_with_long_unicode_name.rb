@@ -12,7 +12,7 @@ name = long_unicode_string
 result = create_policy agents, policy_name: name, policy_max_count: 5
 
 agents.each do |agent|
-  text = on(agent, "razor -u https://#{agent}:8151/api policies '#{name}'").output
+  text = on(agent, "razor policies '#{name}'").output
   assert_match /max_count:\s+5/, text
 end
 
@@ -22,6 +22,6 @@ json = {
 }
 razor agents, 'modify-policy-max-count', json do |agent|
   step "Verify that the count was increased on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api policies '#{name}'").output
+  text = on(agent, "razor policies '#{name}'").output
   assert_match /max_count:\s+6/, text
 end

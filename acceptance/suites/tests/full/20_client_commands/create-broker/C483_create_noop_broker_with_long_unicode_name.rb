@@ -15,7 +15,7 @@ json = {"name" => "#{name}", "broker-type" => "noop"}
 
 razor agents, 'create-broker', json do |agent|
   step "Verify that the broker is defined on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api brokers").output
+  text = on(agent, "razor brokers").output
   assert_match /#{Regexp.escape(name)}/, text
 end
 

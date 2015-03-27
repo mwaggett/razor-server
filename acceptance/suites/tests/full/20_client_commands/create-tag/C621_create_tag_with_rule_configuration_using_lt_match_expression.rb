@@ -10,6 +10,6 @@ reset_database
 
 razor agents, 'create-tag --name puppet-test-tag --rule \'["lt", 0, 1]\'' do |agent|
   step "Verify that the tag is defined on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api tags").output
+  text = on(agent, "razor tags").output
   assert_match /puppet-test-tag/, text
 end

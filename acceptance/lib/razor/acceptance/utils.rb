@@ -46,7 +46,7 @@ def razor(where, what, args = nil, options = {}, &block)
 
   Array(where).each do |node|
     step "Run #{what} on #{node}"
-    cmd = "razor -u https://#{node}:8151/api #{what} " +
+    cmd = "razor #{what} " +
       (json ? "--json #{file}" : Array(args).shelljoin)
 
     output = on(node, cmd, options).output

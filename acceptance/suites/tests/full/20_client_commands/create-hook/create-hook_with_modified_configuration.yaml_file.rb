@@ -16,8 +16,8 @@ hook_path     = "#{hook_dir}/#{hook_type}.hook"
 teardown do
   agents.each do |agent|
     on(agent, "test -e #{hook_dir}.bak && mv #{hook_dir}.bak  #{hook_dir} || rm -rf #{hook_dir}")
-    on(agent, "razor -u https://#{agent}:8151/api delete-hook --name #{hook_name1}")
-    on(agent, "razor -u https://#{agent}:8151/api delete-hook --name #{hook_name2}")
+    on(agent, "razor delete-hook --name #{hook_name1}")
+    on(agent, "razor delete-hook --name #{hook_name2}")
   end
 end
 
@@ -80,12 +80,12 @@ agents.each do |agent|
   on(agent, "chmod +r #{hook_path}/configuration.yaml")
 
   step "Create a hook with original configuration.yaml file:"
-  on(agent, "razor -u https://#{agent}:8151/api create-hook --name #{hook_name1}" \
+  on(agent, "razor create-hook --name #{hook_name1}" \
             " --hook-type #{hook_type} --c value=5 --c foo=newFoo --c bar=newBar")
 
   step 'Verify if the hook is successfully created:'
   on(agent, "razor -u https://razor-razor@#{agent}:8151/api hooks") do |result|
-    assert_match(/name: #{hook_name1}/, result.stdout, 'razor create-hook failed with original configuration.yaml file')
+    assert_match(/#{hook_name1}/, result.stdout, 'razor create-hook failed with original configuration.yaml file')
   end
 
   step "Create modified configuration.yaml file:"
@@ -96,8 +96,8 @@ agents.each do |agent|
   razor agent, 'create-hook', json
 
   step "Verify that the hook is created on #{agent}"
-    on(agent, "razor -u https://#{agent}:8151/api hooks") do |result|
-      assert_match(/name: #{hook_name2}/, result.stdout, 'razor create-hook failed with modified configuration.yaml file')
+    on(agent, "razor hooks") do |result|
+      assert_match(/#{hook_name2}/, result.stdout, 'razor create-hook failed with modified configuration.yaml file')
 
     end
 end

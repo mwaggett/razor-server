@@ -15,7 +15,7 @@ hook_path     = "#{hook_dir}/#{hook_type}.hook"
 teardown do
   agents.each do |agent|
     on(agent, "test -e #{hook_dir}.bak && mv #{hook_dir}.bak  #{hook_dir} || rm -rf #{hook_dir}")
-    on(agent, "razor -u https://#{agent}:8151/api delete-hook --name #{hook_name}")
+    on(agent, "razor delete-hook --name #{hook_name}")
   end
 end
 
@@ -60,7 +60,7 @@ agents.each do |agent|
   razor agent, 'create-hook', json
   
   step "Verify that the hook is created on #{agent}"
-    on(agent, "razor -u https://#{agent}:8151/api hooks") do |result|
-      assert_match(/name: #{hook_name}/, result.stdout, 'razor create-hook failed')
+    on(agent, "razor hooks") do |result|
+      assert_match(/#{hook_name}/, result.stdout, 'razor create-hook failed')
     end
 end

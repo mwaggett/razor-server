@@ -11,24 +11,24 @@ reset_database
 razor agents, 'register-node --installed true --hw-info net0=abcdef' do |agent, output|
   name = /name:\s+(?<name>.+)/.match(output)[:name]
   step "Verify that the node is defined on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api nodes #{name}").output
+  text = on(agent, "razor nodes #{name}").output
   assert_match /name: /, text
 
   razor agent, 'modify-node-metadata --node ' + name + ' --update key=value --update other-key=other-value' do |agent|
     step "Verify that the metadata is defined on #{agent}"
-    text = on(agent, "razor -u https://#{agent}:8151/api nodes #{name}").output
+    text = on(agent, "razor nodes #{name}").output
     assert_match /key:\s+value/, text
     assert_match /other-key:\s+other-value/, text
   end
   razor agent, 'modify-node-metadata --node ' + name + ' --clear' do |agent|
     step "Verify that the metadata is removed on #{agent}"
-    text = on(agent, "razor -u https://#{agent}:8151/api nodes #{name}").output
+    text = on(agent, "razor nodes #{name}").output
     refute_match /key:\s+value/, text
     refute_match /other-key:\s+other-value/, text
   end
   razor agent, 'modify-node-metadata --node ' + name + ' --update key=new-value' do |agent|
     step "Verify that the metadata is defined on #{agent}"
-    text = on(agent, "razor -u https://#{agent}:8151/api nodes #{name}").output
+    text = on(agent, "razor nodes #{name}").output
     assert_match /key:\s+new-value/, text
   end
 end

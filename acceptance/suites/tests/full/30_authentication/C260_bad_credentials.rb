@@ -59,7 +59,7 @@ agents.each do |agent|
 
     step "Verify restart was successful on #{agent}"
     agents.each do |agent|
-      text = on(agent, "razor -u https://#{agent}:8151/api").output
+      text = on(agent, "razor").output
       assert_match(/Collections:/, text,
                    'The help information should be displayed again')
     end

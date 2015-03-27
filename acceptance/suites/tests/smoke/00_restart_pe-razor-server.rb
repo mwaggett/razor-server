@@ -11,7 +11,7 @@ restart_razor_service(agents)
 
 step 'Verify restart was successful'
 agents.each do |agent|
-  text = on(agent, "razor -u https://#{agent}:8151/api").output
+  text = on(agent, "razor").output
 
   assert_match(/Usage: razor \[FLAGS\] NAVIGATION/, text,
     'The help information should be displayed')

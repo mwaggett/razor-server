@@ -10,6 +10,6 @@ reset_database
 
 create_policy agents, policy_max_count: 20150 do |agent, _, hash|
   step "Verify that the policy is defined on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api policies #{hash[:policy][:name]}").output
+  text = on(agent, "razor policies #{hash[:policy][:name]}").output
   assert_match /20150/, text
 end
