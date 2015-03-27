@@ -146,6 +146,21 @@ module RazorExtensions
       end
     end
   end
+
+  def with_backup_of(host, file, &block)
+    Dir.mktmpdir('beaker-razor-tmp') do |tmpdir|
+      scp_from host, file, tmpdir
+      begin
+        block and case block.arity
+                  when 0 then yield
+                  when 1 then yield tmpdir
+                  end
+      ensure
+        scp_to host, File::join(tmpdir, File.basename(file)), File.dirname(file)
+        on host, "chmod +r '#{file}'"
+      end
+    end
+  end
 end
 
 Beaker::TestCase.send(:include, RazorExtensions)

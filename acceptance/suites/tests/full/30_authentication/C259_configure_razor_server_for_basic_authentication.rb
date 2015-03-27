@@ -7,33 +7,25 @@ confine :except, :roles => %w{master dashboard database frictionless}
 test_name 'Configure Razor server for basic authentication'
 step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/259'
 
-def with_backup_of(host, file)
-  Dir.mktmpdir('beaker-backup') do |tmpdir|
-    scp_from host, "/etc/puppetlabs/razor/#{file}", tmpdir
-    begin
-      yield tmpdir
-    ensure
-      scp_to host, File::join(tmpdir, file), "/etc/puppetlabs/razor/#{file}"
-    end
-  end
-end
+config_yaml = '/etc/puppetlabs/razor/config.yaml'
+shiro_ini = '/etc/puppetlabs/razor/shiro.ini'
 
 agents.each do |agent|
   begin
     step "Enable authentication on #{agent}"
-    with_backup_of(agent, 'config.yaml') do |config_tmpdir|
-      config = on(agent, 'cat /etc/puppetlabs/razor/config.yaml').output
+    with_backup_of(agent, config_yaml) do |config_tmpdir|
+      config = on(agent, "cat #{config_yaml}").output
       yaml = YAML.load(config)
       yaml['all']['auth']['enabled'] = true
       config = YAML.dump(yaml)
       File.open(File::join(config_tmpdir, 'new-config.yaml'), 'w') {|f| f.write(config) }
       step "Copy modified config.yaml to #{agent}"
-      scp_to agent, File::join(config_tmpdir, 'new-config.yaml'), '/etc/puppetlabs/razor/config.yaml'
-      on agent, 'chmod +r /etc/puppetlabs/razor/config.yaml'
+      scp_to agent, File::join(config_tmpdir, 'new-config.yaml'), config_yaml
+      on agent, "chmod +r #{config_yaml}"
 
       step "Set up users on #{agent}"
-      with_backup_of(agent, 'shiro.ini') do |_|
-        shiro = on(agent, 'cat /etc/puppetlabs/razor/shiro.ini').output
+      with_backup_of(agent, shiro_ini) do |_|
+        shiro = on(agent, "cat #{shiro_ini}").output
         assert_match /^\s*razor = razor/, shiro, 'User razor should already have password "razor"'
 
         step "Restart Razor Service on #{agent}"
