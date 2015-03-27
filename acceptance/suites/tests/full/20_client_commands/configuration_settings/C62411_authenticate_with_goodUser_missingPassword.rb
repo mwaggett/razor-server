@@ -44,7 +44,7 @@ agents.each do |agent|
   restart_razor_service(agent)
 
   step 'C62411: Authenticate to razor server #{agent} with good user and missing password'
-  on(agent, "razor -u https://razor:@#{agent}:8151/api") do |result|
+  on(agent, "razor -u https://razor:@#{agent}:8151/api", acceptable_exit_codes: 1) do |result|
     assert_match(/Credentials are required/, result.stdout, 'The request should be unauthorized')
   end
 end

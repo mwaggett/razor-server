@@ -42,7 +42,7 @@ agents.each do |agent|
         restart_razor_service(agent)
 
         step "Verify authentication on #{agent}"
-        text = on(agent, "razor -u https://bad_username:bad_password@#{agent}:8151/api").output
+        text = on(agent, "razor -u https://bad_username:bad_password@#{agent}:8151/api", acceptable_exit_codes: 1).output
 
         assert_match(/Credentials are required/, text,
                      'The request should be unauthorized')

@@ -44,7 +44,7 @@ agents.each do |agent|
   restart_razor_service(agent)
 
   step 'C61687: Authenticate to razor server #{agent} with wrong format of credentials ("-" instead of ":")'
-  on(agent, "razor -u https://razor-razor@#{agent}:8151/api", exit: 1) do |result|
+  on(agent, "razor -u https://razor-razor@#{agent}:8151/api", acceptable_exit_codes: 1) do |result|
     assert_match(/Credentials are required/, result.stdout, 'The request should be unauthorized')
   end
 end
