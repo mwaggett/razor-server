@@ -15,7 +15,7 @@ hook_path     = "#{hook_dir}/#{hook_type}.hook"
 
 teardown do
   agents.each do |agent|
-    on(agent, "test -e #{hook_dir}.bak && mv #{hook_dir}.bak  #{hook_dir} || rm -rf #{hook_dir}")
+    on(agent, "test -e #{hook_dir}.bak && mv #{hook_dir}.bak #{hook_dir}")
     on(agent, "razor delete-hook --name #{hook_name1}")
     on(agent, "razor delete-hook --name #{hook_name2}")
   end
@@ -25,7 +25,7 @@ reset_database
 
 step "Backup #{hook_dir}"
 agents.each do |agent|
-  on(agent, "test -e #{hook_dir} && cp #{hook_dir} #{hook_dir}.bak} || true")
+  on(agent, "test -e #{hook_dir} && cp #{hook_dir} #{hook_dir}.bak")
 end
 
 json = {

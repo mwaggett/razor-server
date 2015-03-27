@@ -12,7 +12,7 @@ config_yaml_bak   = '/tmp/config.yaml.bak'
 
 teardown do
   agents.each do |agent|
-    on(agent, "test -e #{config_yaml_bak} && mv #{config_yaml_bak} #{config_yaml} || rm #{config_yaml}")
+    on(agent, "test -e #{config_yaml_bak} && mv #{config_yaml_bak} #{config_yaml}")
     on(agent, "chmod +r #{config_yaml}")
     restart_razor_service(agent)
   end
@@ -20,7 +20,7 @@ end
 
 step "Backup #{config_yaml}"
 agents.each do |agent|
-  on(agent, "test -e #{config_yaml} && cp #{config_yaml} #{config_yaml_bak} || true")
+  on(agent, "test -e #{config_yaml} && cp #{config_yaml} #{config_yaml_bak}")
 end
 
 agents.each do |agent|

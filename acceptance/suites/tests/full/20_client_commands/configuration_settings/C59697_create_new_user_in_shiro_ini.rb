@@ -15,8 +15,8 @@ shiro_ini_bak     = '/tmp/shiro.ini.bak'
 
 teardown do
   agents.each do |agent|
-    on(agent, "test -e #{config_yaml_bak} && mv #{config_yaml_bak} #{config_yaml} || rm #{config_yaml}")
-    on(agent, "test -e #{shiro_ini_bak} && mv #{shiro_ini_bak} #{shiro_ini} || rm #{shiro_ini}")
+    on(agent, "test -e #{config_yaml_bak} && mv #{config_yaml_bak} #{config_yaml}")
+    on(agent, "test -e #{shiro_ini_bak} && mv #{shiro_ini_bak} #{shiro_ini}")
     on(agent, "chmod +r #{config_yaml} #{shiro_ini}")
     restart_razor_service(agent)
   end
@@ -24,8 +24,8 @@ end
 
 step "Backup #{config_yaml} and #{shiro_ini}"
 agents.each do |agent|
-  on(agent, "test -e #{config_yaml} && cp #{config_yaml} #{config_yaml_bak} || true")
-  on(agent, "test -e #{shiro_ini} && cp #{shiro_ini} #{shiro_ini_bak} || true")
+  on(agent, "test -e #{config_yaml} && cp #{config_yaml} #{config_yaml_bak}")
+  on(agent, "test -e #{shiro_ini} && cp #{shiro_ini} #{shiro_ini_bak}")
 end
 
 agents.each do |agent|
