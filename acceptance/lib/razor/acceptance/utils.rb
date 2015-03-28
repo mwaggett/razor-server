@@ -23,7 +23,7 @@ def reset_database(where = agents, clear_queue = true)
   step 'Reset the razor database to a blank slate'
   on where, 'env TORQUEBOX_FALLBACK_LOGFILE=/dev/null ' +
     '/opt/puppet/bin/razor-admin -e production reset-database'
-  on where, 'curl -kfX POST https://localhost:8151/api/commands/dequeue-message-queue' if clear_queue
+  on where, 'curl -kfX POST https://localhost:8151/api/commands/dequeue-message-queues' if clear_queue
 end
 
 def razor(where, what, args = nil, options = {}, &block)
