@@ -4,7 +4,7 @@ step "Install PE Razor Server"
     on host, 'service pe-razor-server stop'
     install_pe_razor_server host
     on host, 'service pe-razor-server start >&/dev/null'
-    unless retry_on(host, 'curl -k https://localhost:8151/api',
+    unless retry_on(host, 'curl -kf https://localhost:8151/api',
                     :max_retries => 30, :retry_interval => 5)
       raise RuntimeError, "server #{host} did not start back up"
     end
