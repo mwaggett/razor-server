@@ -18,6 +18,8 @@ bundle install --path vendor/bundle
 
 bundle exec genconfig2 $GENCONFIG_LAYOUT > $BEAKER_CONFIG
 
+: ${PE_RAZOR_SERVER_PACKAGE_BUILD_VERSION:?"PE_RAZOR_SERVER_PACKAGE_BUILD_VERSION is required"}
+
 bundle exec beaker \
   --config $BEAKER_CONFIG \
   --pre-suite $BEAKER_PRESUITE \
