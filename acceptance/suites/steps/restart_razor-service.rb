@@ -7,11 +7,13 @@ step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/8'
 step 'Restart Razor Service'
 # the redirect to /dev/null is to work around a bug in the init script or
 # service, per: https://tickets.puppetlabs.com/browse/RAZOR-247
-on agents, 'service pe-razor-server restart >&/dev/null'
+agents.each do |agent|
+  restart_razor_service(agent)
+end
 
 step 'Verify restart was successful'
 agents.each do |agent|
-  text = on(agent, "razor -u https://#{agent}:8151/api").output
+  text = on(agent, "razor").output
 
   assert_match(/Usage: razor \[FLAGS\] NAVIGATION/, text,
     'The help information should be displayed')

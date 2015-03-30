@@ -17,7 +17,7 @@ json = {
 }
 razor agents, 'create-repo', json do |agent|
   step "Verify that the repo is defined on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api repos").output
+  text = on(agent, "razor repos").output
   assert_match /#{Regexp.escape(name)}/, text
 end
 
@@ -26,6 +26,6 @@ json = {
 }
 razor agents, 'delete-repo', json do |agent|
   step "Verify that the repo is no longer defined on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api repos").output
+  text = on(agent, "razor repos").output
   refute_match /#{Regexp.escape(name)}/, text
 end

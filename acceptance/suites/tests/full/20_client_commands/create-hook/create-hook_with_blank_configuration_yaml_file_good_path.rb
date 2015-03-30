@@ -12,33 +12,26 @@ hook_type     = 'hook_type_1'
 hook_name     = 'hookName1'
 hook_path     = "#{hook_dir}/#{hook_type}.hook"
 
-teardown do
-  agents.each do |agent|
-    on(agent, "test -e #{hook_dir}.bak && mv #{hook_dir}.bak  #{hook_dir} || rm -rf #{hook_dir}")
-    on(agent, "razor -u https://#{agent}:8151/api delete-hook --name #{hook_name}")
-  end
-end
-
-step "Backup #{hook_dir}"
-agents.each do |agent|
-  on(agent, "test -e #{hook_dir} && cp #{hook_dir} #{hook_dir}.bak} || true")
-end
-
-configurationFile =<<-EOF
+configuration_file =<<-EOF
 EOF
 
-step "Create hook type"
-agents.each do |agent|
-  on(agent, "mkdir -p #{hook_path}")
-  create_remote_file(agent,"#{hook_path}/configuration.yaml", configurationFile)
-  on(agent, "chmod +r #{hook_path}/configuration.yaml")
-  on(agent, "razor -u https://#{agent}:8151/api create-hook --name #{hook_name} --hook-type #{hook_type}")
-
-  step "Verify the hook has been successfully created"
-  on(agent, "razor -u https://razor-razor@#{agent}:8151/api hooks") do |result|
-    assert_match(/name: #{hook_name}/, result.stdout, 'razor create-hook failed')
+teardown do
+  agents.each do |agent|
+    on(agent, "razor delete-hook --name #{hook_name}")
   end
 end
 
+agents.each do |agent|
+  with_backup_of(agent, hook_dir) do
+    step "Create hook type"
+    on(agent, "mkdir -p #{hook_path}")
+    create_remote_file(agent,"#{hook_path}/configuration.yaml", configuration_file)
+    on(agent, "chmod +r #{hook_path}/configuration.yaml")
+    on(agent, "razor create-hook --name #{hook_name} --hook-type #{hook_type}")
 
-
+    step "Verify the hook has been successfully created"
+    on(agent, "razor -u https://razor-razor@#{agent}:8151/api hooks") do |result|
+      assert_match(/#{hook_name}/, result.stdout, 'razor create-hook failed')
+    end
+  end
+end

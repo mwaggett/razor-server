@@ -8,26 +8,16 @@ test_name 'QA-1820 - C63491 - create-hook no hook directory'
 step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/63491'
 
 hook_dir      = '/opt/puppet/share/razor-server/hooks'
-hook_type     = 'hook_type_1'
+hook_type     = 'does_not_exist'
 hook_name     = 'hookName1'
-hook_path     = "#{hook_dir}/#{hook_type}.hook"
-
-teardown do
-  agents.each do |agent|
-    on(agent, "test -e #{hook_dir}.bak && mv #{hook_dir}.bak  #{hook_dir} || rm -rf #{hook_dir}")
-  end
-end
-
-step "Backup #{hook_dir}"
-agents.each do |agent|
-  on(agent, "test -e #{hook_dir} && cp #{hook_dir} #{hook_dir}.bak} || true")
-end
 
 step "Create hook type"
 agents.each do |agent|
-  on(agent, "razor -u https://#{agent}:8151/api create-hook --name #{hook_name}" \
-            " --hook-type #{hook_type} --c value=5 --c foo=newFoo --c bar=newBar", \
-            :acceptable_exit_codes => [1]) do |result|
-    assert_match %r(error: hook_type must be the name of an existing hook type, but is \'#{hook_type}\'), result.stdout
+  with_backup_of(agent, hook_dir) do
+    on(agent, "razor create-hook --name #{hook_name}" \
+              " --hook-type #{hook_type} --c value=5 --c foo=newFoo --c bar=newBar", \
+              :acceptable_exit_codes => [1]) do |result|
+      assert_match %r(error: hook_type must be the name of an existing hook type, but is \'#{hook_type}\'), result.stdout
+    end
   end
 end

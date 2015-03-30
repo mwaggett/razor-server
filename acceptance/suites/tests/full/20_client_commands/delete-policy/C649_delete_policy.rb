@@ -13,6 +13,6 @@ name = results[:policy][:name]
 
 razor agents, "delete-policy --name #{name}" do |agent|
   step "Verify that the policy is no longer defined on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api policies").output
+  text = on(agent, "razor policies").output
   refute_match /#{name}/, text
 end

@@ -4,7 +4,7 @@ acceptance_dir=$script_dir/../
 
 cd $acceptance_dir
 
-export pe_dist_dir=http://pe-releases.puppetlabs.lan/3.7.1/
+export pe_dist_dir=http://enterprise.delivery.puppetlabs.net/3.8/ci-ready
 
 export BEAKER_TESTSUITE="${2:-suites/tests/}"
 export BEAKER_PRESUITE="suites/pre_suite/install-server-from-package"
@@ -17,6 +17,8 @@ export GEM_SOURCE=http://rubygems.delivery.puppetlabs.net
 bundle install --path vendor/bundle
 
 bundle exec genconfig2 $GENCONFIG_LAYOUT > $BEAKER_CONFIG
+
+: ${PE_RAZOR_SERVER_PACKAGE_BUILD_VERSION:?"PE_RAZOR_SERVER_PACKAGE_BUILD_VERSION is required"}
 
 bundle exec beaker \
   --config $BEAKER_CONFIG \

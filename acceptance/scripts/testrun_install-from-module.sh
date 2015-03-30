@@ -4,7 +4,7 @@ acceptance_dir=$script_dir/../
 
 cd $acceptance_dir
 
-export pe_dist_dir=http://pe-releases.puppetlabs.lan/3.7.1/
+export pe_dist_dir=http://enterprise.delivery.puppetlabs.net/3.8/ci-ready
 
 export BEAKER_TESTSUITE="${2:-suites/tests/}"
 export BEAKER_PRESUITE="suites/pre_suite/install-server-from-module"
@@ -23,6 +23,7 @@ bundle exec beaker \
   --pre-suite $BEAKER_PRESUITE \
   --tests $BEAKER_TESTSUITE \
   --keyfile $BEAKER_KEYFILE \
+  --helper lib/helper.rb \
   --load-path lib \
   --preserve-hosts onfail \
   --debug \

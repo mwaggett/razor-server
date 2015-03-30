@@ -9,7 +9,7 @@ on agents, 'service pe-razor-server stop'
 
 step 'Verify that the service is not operational'
 agents.each do |agent|
-  text = on(agent, "razor -u https://#{agent}:8151/api").output
+  text = on(agent, "razor").output
 
   assert_match(/Could not connect to the server/, text)
 end

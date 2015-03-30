@@ -16,7 +16,7 @@ json = {
 }
 razor agents, 'create-tag', json do |agent|
   step "Verify that the tag is defined on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api tags").output
+  text = on(agent, "razor tags").output
   assert_match /#{Regexp.escape(name)}/, text
 end
 
@@ -25,6 +25,6 @@ json = {
 }
 razor agents, 'delete-tag', json do |agent|
   step "Verify that the tag is no longer defined on #{agent}"
-  text = on(agent, "razor -u https://#{agent}:8151/api tags").output
+  text = on(agent, "razor tags").output
   refute_match /#{Regexp.escape(name)}/, text
 end
