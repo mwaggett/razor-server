@@ -3,7 +3,7 @@
 require 'razor/acceptance/utils'
 confine :except, :roles => %w{master dashboard database frictionless}
 
-test_name "Modify policy max count increase"
+test_name "Modify policy max count clear limit"
 step "https://testrail.ops.puppetlabs.net/index.php?/cases/view/725"
 
 reset_database
@@ -14,7 +14,7 @@ agents.each do |agent|
   assert_match /max_count:\s+5/, text
 end
 
-razor agents, "modify-policy-max-count --name #{result[:policy][:name]} --max-count" do |agent|
+razor agents, "modify-policy-max-count --name #{result[:policy][:name]} --no-max-count" do |agent|
   step "Verify that the count was increased on #{agent}"
   text = on(agent, "razor policies #{result[:policy][:name]}").output
   assert_match /max_count:\s+nil/, text
