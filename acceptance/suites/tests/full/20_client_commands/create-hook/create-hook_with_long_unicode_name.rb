@@ -9,7 +9,7 @@ step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/59715'
 
 hook_dir      = '/opt/puppet/share/razor-server/hooks'
 hook_type     = 'hook_type_1'
-hook_name     = "扊扊扊℃갗ⴎ駘Ⰲ㽸Ꚁ扊℃갗ⴎ駘Ⰲ㽸Ꚁ扊℃갗ⴎ駘Ⰲ㽸Ꚁ扊℃갗ⴎ駘Ⰲ㽸Ꚁ扊℃갗ⴎ駘Ⰲ㽸Ꚁ扊℃갗ⴎ駘Ⰲ㽸Ꚁ扊℃갗ⴎ駘Ⰲ㽸Ꚁ扊℃갗ⴎ駘Ⰲ㽸Ꚁ扊℃갗ⴎ駘Ⰲ㽸Ꚁ扊℃갗ⴎ駘Ⰲ㽸Ꚁ扊"
+hook_name     = long_unicode_string
 hook_path     = "#{hook_dir}/#{hook_type}.hook"
 
 configuration_file =<<-EOF
@@ -26,11 +26,23 @@ bar:
 
 EOF
 
+delete_json = {
+    'name' => hook_name
+}
+
 teardown do
   agents.each do |agent|
-    on(agent, "razor delete-hook --name #{hook_name}")
+    razor(agent, "delete-hook", delete_json)
   end
 end
+
+json = {
+    'name' => hook_name,
+    'hook_type' => hook_type,
+    'c' => { 'value' => '5',
+             'foo' => 'newFoo',
+             'bar' => 'newBar' }
+}
 
 agents.each do |agent|
   with_backup_of(agent, hook_dir) do
@@ -38,12 +50,11 @@ agents.each do |agent|
     on(agent, "mkdir -p #{hook_path}")
     create_remote_file(agent,"#{hook_path}/configuration.yaml", configuration_file)
     on(agent, "chmod +r #{hook_path}/configuration.yaml")
-    on(agent, "razor create-hook --name #{hook_name}" \
-            " --hook-type #{hook_type} --c value=5 --c foo=newFoo --c bar=newBar")
+    razor(agent, "create-hook", json)
 
     step 'Verify if the hook is successfully created:'
     on(agent, "razor -u https://razor-razor@#{agent}:8151/api hooks") do |result|
-      assert_match(/#{hook_name}/, result.stdout, 'razor create-hook failed')
+      assert_match(/#{Regexp.escape(hook_name)}/, result.stdout, 'razor create-hook failed')
     end
   end
 end
