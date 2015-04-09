@@ -101,7 +101,7 @@ start() {
 run() {
     exec >&"${JBOSS_CONSOLE_LOG}" \
         "${JBOSS_SCRIPT}" "-Djboss.server.log.dir=${JBOSS_LOG_DIR}" \
-        "-b" "0.0.0.0"
+        "-Dhttp.port=${HTTP_PORT} -Dhttps.port=${HTTPS_PORT}" "-b" "0.0.0.0"
 }
 
 
