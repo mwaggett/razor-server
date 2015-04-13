@@ -203,3 +203,38 @@ def restart_puppet_server(host, opts = {})
   raise StandardError, 'Attempting to restart the puppet server was not successful in the time alloted.'
 
 end
+
+# include a pe_repo:platform class
+# If the razor node operating system is different from the puppet master operating system
+# when it attempt to install agent on the node, it will fail because the master does not
+# have the pe_repo:platfrom class for the razor node OS
+# this method will return empty string if master and razor node have the same OS
+# if not, it will return the string for  needed class, i.e pe_repo::platform::ubuntu_1404_amd64 if the
+# razor node OS is ubuntu 14 but Master OS is not Ubuntu14
+def platform_class(razor_node_os)
+  razor_node_platform_class = ''
+  cur_platform    = "#{razor_node_os}"
+  master_os       = on(master, 'facter operatingsystem').stdout
+  master_release  = on(master, 'facter operatingsystemrelease').stdout
+
+  if (cur_platform == 'UBUNTU14')
+    if(master_os == 'Ubuntu' && master_release =~ /14(.*)/)
+      razor_node_platform_class = ''
+    else
+      razor_node_platform_class = "pe_repo::platform::ubuntu_1404_amd64"
+    end
+  elsif (cur_platform == 'CENTOS6' or cur_platform == 'RHEL6')
+    if((master_os == 'Centos' && master_release =~ /6(.*)/) or (master_os == 'RedHat' && master_release =~ /6(.*)/))
+      razor_node_platform_class = ''
+    else
+      razor_node_platform_class = "pe_repo::platform::el_6_x86_64"
+    end
+  elsif (cur_platform == 'CENTOS7' or cur_platform == 'RHEL7')
+    if((master_os == 'Centos' && master_release =~ /7(.*)/) or (master_os == 'RedHat' && master_release =~ /7(.*)/))
+      razor_node_platform_class = ''
+    else
+      razor_node_platform_class = "pe_repo::platform::el_7_x86_64"
+    end
+  end
+  return razor_node_platform_class
+end
