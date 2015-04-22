@@ -10,8 +10,13 @@ def location_for(place, fake_version = nil)
   end
 end
 
-group :ci do
-  gem 'beaker', *location_for(ENV['BEAKER_LOCATION'] || '~> 2.5')
+beaker_version = ENV['BEAKER_LOCATION'] || ENV['BEAKER_VERSION']
+group :ci, :system_tests do
+  if beaker_version
+    gem 'beaker', *location_for(beaker_version)
+  else
+    gem 'beaker', '~> 2.5')
+  end
   if ENV['GEM_SOURCE'] =~ /rubygems\.delivery\.puppetlabs\.net/
     gem 'sqa-utils', '~> 0.11'
   end
