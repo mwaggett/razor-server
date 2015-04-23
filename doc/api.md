@@ -420,6 +420,41 @@ The code on the server would be contained in the `hooks/some_hook.hook`
 directory. More information on hooks can be found in the Hooks README 
 (`hooks.md`).
 
+### Update hook configuration
+
+A hook's configuration can be updated using the `update-hook-configuration`
+command. This command can set or clear a single key's value. The following
+arguments would set the configuration value for key `some_key` to `new_value`:
+
+    {
+      "hook": "myhook",
+      "key": "some_key",
+      "value": "new_value"
+    }
+
+The following arguments would clear the configuration value for key `some_key`:
+
+    {
+      "hook": "myhook",
+      "key": "some_key",
+      "clear": true
+    }
+
+### Run hook
+
+The `run-hook` command triggers a hook to execute. This is helpful when writing
+your own hook scripts in testing their validity. To run the hook which would
+occur when the given node boots, use the following arguments:
+
+    {
+      "name": "myhook",
+      "node": "node1",
+      "event": "node-booted"
+    }
+
+Note that any of the usual event names can be used for the `event` argument.
+See `hooks.md` for a list of these possibilities.
+
 ### Delete hook
 
 A single hook can be removed from the database with the `delete-hook`

@@ -1,5 +1,16 @@
 # Razor Server Release Notes
 
+## Next.Next - TBD
+
+### Other
+
++ NEW: The `update-hook-configuration` command allows changing an existing
+  hook's configuration, which should help with hook script creation.
++ NEW: The `run-hook` command allows arbitrary execution of a hook.
++ NEW: The `store_hook_input` and `store_hook_output` config settings can
+  toggle storing the input and output for a hook script in the event log. These
+  are disabled by default.
+
 ## Next - TBD
 
 ### Incompatible changes
@@ -24,6 +35,8 @@
   namespace need to be over HTTPS with SSL, and otherwise will return a 404.
   The actual configuration of this happens in Torquebox's configuration. By
   default, this property is false (no change from current behavior).
++ IMPROVEMENT: `HTTP_PORT` and `HTTPS_PORT` will be used to set the ports for
+  HTTP and HTTPS communication instead of `RAZOR_PORT`
 + NEW: If the razor-server is configured to use SSL, any HTTPS calls to
   /api/microkernel/bootstrap must include the `http_port` argument.
 + BUGFIX: Any metadata that returned an array or hash caused unreliable

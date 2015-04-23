@@ -30,6 +30,11 @@
 class Razor::Data::Hook < Sequel::Model
   one_to_many :events
 
+  # If this changes, also update the hooks.md file.
+  AVAILABLE_EVENTS = %w(node-booted node-registered node-bound-to-policy
+                        node-unbound-from-policy node-deleted node-facts-changed
+                        node-install-finished)
+
   plugin :serialization, :json, :configuration
 
   serialize_attributes [
@@ -56,20 +61,21 @@ class Razor::Data::Hook < Sequel::Model
     end
   end
 
-  def _handle(hash)
-    handle(hash['cause'], hash['args'])
+  def _run(hash)
+    run(hash['cause'], hash['args'])
   end
 
-  def handle(event, args = {})
+  # This runs the hook in-process. If it should be executed asynchronously, use
+  # `trigger`. Returns nil if the hook has no handler for the event.
+  def run(event, args = {})
+    raise ArgumentError.new("cannot run hook with event #{event}") unless AVAILABLE_EVENTS.include?(event)
     if script = find_script(event)
       # FIXME: args may contain Data objects; they need to be serialized
       # special
       # FIXME^2: we do this for Node, but it should be more general
       loop do
-        # FIXME: Below is for asynchronous execution.
-        # publish('run', event, script.to_s, args)
-        result = run(event, script, args)
-        break if result != :retry
+        result = execute(event, script, args)
+        break result if result != :retry
         # Small sleep to avoid busy-waiting.
         sleep(0.1)
       end
@@ -82,17 +88,26 @@ class Razor::Data::Hook < Sequel::Model
     !!(find_script(event_name))
   end
 
-  # Run all hooks that have a handler for event
-  def self.run(cause, args = {})
+  # Trigger all hooks that have a handler for event. The implementation is
+  # asynchronous. `run` is synchronous.
+  def self.trigger(cause, args = {})
     # Do not disturb original arguments.
     # Serialize the objects here to avoid another database call on objects
     # that may be gone by the time the hook runs.
     self.all do |hook|
-      next unless hook.handles_event?(cause)
-      formatted_args = args.dup.merge(hook.serialize_arguments(cause, node: args[:node], policy: args[:policy]))
-      hook.publish '_handle', 'cause' => cause, 'args' => formatted_args,
-                              'queue' => '/queues/razor/sequel-hook-messages'
+      hook.trigger(cause, args)
     end
+  end
+
+  # Trigger one hook. This will skip if there is no handler for the event.
+  # The implementation is asynchronous; `run` is synchronous.
+  def trigger(cause, args = {})
+    return unless handles_event?(cause)
+    formatted_args = args.dup.merge(serialize_arguments(cause, node: args[:node], policy: args[:policy]))
+    # Call the `_run` method so the queue arguments can be converted into a
+    # standardized format for the actual `run` method.
+    publish '_run', 'cause' => cause, 'args' => formatted_args,
+                 'queue' => '/queues/razor/sequel-hook-messages'
   end
 
   # Delegator for private method
@@ -180,10 +195,15 @@ class Razor::Data::Hook < Sequel::Model
     end
   end
 
-  def run(cause, script, args = {})
+  # This performs the actual work for running the hook script. The `debug`
+  # argument in the `args` hash is stripped away before generating
+  # arguments for the hook script.
+  def execute(cause, script, args = {})
+    debug = args.delete(:debug)
     Razor.database.transaction(savepoint: true) do
       return :retry unless lock!
       appender = Appender.new(hook: self)
+      args[:hook] ||= {}
       node_id = args[:node][:id] unless args[:node].nil?
       policy_id = args[:policy][:id] unless args[:policy].nil?
       appender.update(node: node_id, policy: policy_id, cause: cause)
@@ -199,11 +219,13 @@ class Razor::Data::Hook < Sequel::Model
         args[:policy] = policy_hash(policy)
       end
 
+      appender.update(input: args.to_json) if Razor.config['store_hook_input'] or debug
       result, output = exec_script(script, args.to_json)
       appender.update(exit_status: result.exitstatus,
                       severity: result.success? ? 'info' : 'error')
       # If the output is not valid JSON, put the whole message into the 'msg' in the Event
       begin
+        appender.update(output: output) if Razor.config['store_hook_output'] or debug
         json = JSON.parse(output)
         appender.update(msg: json['output'], error: json['error'])
         residual = json.keys - ['hook', 'node', 'output', 'error']
@@ -348,6 +370,8 @@ class Razor::Data::Hook < Sequel::Model
     hook = self
     node = args[:node]
     policy = args[:policy] || (node && node.policy)
+    # NOTE: Any updates to this view should be reflected in the `hooks.md`
+    # file as well.
     {
         hook: {
             id: hook.id,
