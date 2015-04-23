@@ -26,9 +26,13 @@ bar:
 
 EOF
 
+delete_json = {
+    'name' => hook_name
+}
+
 teardown do
   agents.each do |agent|
-    on(agent, "razor delete-hook --name #{hook_name}")
+    razor(agent, 'delete-hook', delete_json)
   end
 end
 
