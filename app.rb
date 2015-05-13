@@ -464,7 +464,8 @@ and requires full control over the database (eg: add and remove tables):
       # The stage_done_url needs to be generated in Sinatra, so we calculate it here and pass it on.
       stage_done_url = stage_done_url('broker')
       @node.policy.broker.install_script_for(@node, script_name,
-                                            'stage_done_url' => stage_done_url).tap do |_|
+                                            'stage_done_url' => stage_done_url,
+                                            'log_url' => (url("/svc/log/#{@node.id}"))).tap do |_|
         @node.log_append(:event => :get_broker_file,
                          :script => script_name, :url => request.url)
       end
@@ -747,7 +748,7 @@ and requires full control over the database (eg: add and remove tables):
   end
 
   get '/api/collections/nodes' do
-    collection_view Razor::Data::Node.search(params).order(:name), 'nodes', limit: params[:limit], start: params[:start]
+    collection_view Razor::Data::Node.search(params).order(:id), 'nodes', limit: params[:limit], start: params[:start]
   end
 
   get '/api/collections/nodes/:name' do
