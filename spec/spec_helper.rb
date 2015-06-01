@@ -82,6 +82,7 @@ FIXTURES_PATH = File::expand_path("fixtures", File::dirname(__FILE__))
 INST_PATH = File::join(FIXTURES_PATH, "tasks")
 
 BROKER_FIXTURE_PATH = File.join(FIXTURES_PATH, 'brokers')
+HOOK_FIXTURE_PATH = File.join(FIXTURES_PATH, 'hooks')
 
 def use_task_fixtures
   Razor.config["task_path"] = INST_PATH
@@ -89,6 +90,10 @@ end
 
 def use_broker_fixtures
   Razor.config["broker_path"] = BROKER_FIXTURE_PATH
+end
+
+def use_hook_fixtures
+  Razor.config["hook_path"] = HOOK_FIXTURE_PATH
 end
 
 # Make sure our migration is current, or fail hard.
@@ -173,7 +178,11 @@ module Razor::Test
         last_response.command.command.should == name.to_s
         cmd = Razor::Command.find(name: name)
         params = Hash[params.map{|(k,v)| [k.to_s,v]}]
-        last_response.command.params.should == stringify_keys(cmd.conform!(params))
+        # Do the aliasing and conforming before checking the returned params.
+        modified_params = cmd.conform!(cmd.apply_aliases!(params))
+        # Overwrite with special nested hash values.
+        modified_params = deep_merge(modified_params, opts[:expect]) if opts[:expect]
+        last_response.command.params.should == stringify_keys(modified_params)
         last_response.command.status.should == status
       end
     end
@@ -187,6 +196,16 @@ module Razor::Test
         end
         memo
       end
+    end
+
+    private
+    # This method melds all values from `new` into `original` using the same
+    # structure. `new` must be a hash or nested hash, otherwise will be ignored.
+    # If there exists a value for `new`, it will clobber the corresponding value
+    # in `original` unless both are hashes, in which case the items are merged.
+    def deep_merge(original, new)
+      merger = proc { |key,v1,v2| Hash === v1 && Hash === v2 ? v1.merge(v2, &merger) : v2 }
+      new.merge(original, &merger)
     end
   end
 end

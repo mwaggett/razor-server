@@ -133,13 +133,14 @@ module Razor::Data
 
     # Retrieve the entire log for this node as an array of hashes, ordered
     # by increasing timestamp. In addition to the keys mentioned for
-    # +log_append+ each entry will also contain the +timstamp+ in ISO8601
+    # +log_append+ each entry will also contain the +timestamp+ in ISO8601
     # format
     def log(params = {})
       cursor = Razor::Data::Event.order(:timestamp).order(:id).reverse.
           where(node_id: id).limit(params[:limit], params[:start])
       cursor.map do |log|
-        { 'timestamp' => log.timestamp.xmlschema }.update(log.entry)
+        { 'timestamp' => log.timestamp.xmlschema,
+          'severity' => log.severity, }.update(log.entry)
       end
     end
 
@@ -212,14 +213,14 @@ module Razor::Data
         modify_metadata('no_replace' => true, 'update' => policy.node_metadata)
       end
 
-      Razor::Data::Hook.run('node-bound-to-policy', node: self, policy: policy)
+      Razor::Data::Hook.trigger('node-bound-to-policy', node: self, policy: policy)
 
       self
     end
 
     def unbind
+      Razor::Data::Hook.trigger('node-unbound-from-policy', node: self, policy: self.policy)
       self.policy = nil
-      Razor::Data::Hook.run('node-unbound-from-policy', node: self)
     end
 
     # This is a hack around the fact that the auto_validates plugin does
@@ -291,8 +292,17 @@ module Razor::Data
       if data['update']
         data['update'].is_a? Hash or raise ArgumentError, _('update must be a hash')
         replace = (not [true, 'true'].include?(data['no_replace']))
+
         data['update'].each do |k,v|
-          new_metadata[k] = v if replace or not new_metadata[k]
+          if replace or not new_metadata[k]
+            begin
+              # If the value is valid json, parse it and store as structured
+              new_metadata[k] = JSON::parse(v)
+            rescue
+              # Otherwise just store the data as is.
+              new_metadata[k] = v
+            end
+          end
         end
       end
       if data['remove']
@@ -322,7 +332,7 @@ module Razor::Data
       end
       if facts != new_facts
         self.facts = new_facts
-        Razor::Data::Hook.run('node-facts-changed', node: self)
+        Razor::Data::Hook.trigger('node-facts-changed', node: self)
       end
       # @todo lutter 2013-09-09: we'd really like to use the DB's idea of
       # time, i.e. have the update statement do 'last_checkin = now()' but
@@ -362,7 +372,7 @@ module Razor::Data
         # independent of the order in which the BIOS enumerates NICs. We
         # also don't care about case
         k = "mac" if k =~ /net[0-9]+/
-        [k.downcase, v.strip.downcase]
+        [k.downcase, v.strip.downcase.gsub(":", "-")]
       end.select do |k, _|
         Razor::Config::HW_INFO_KEYS.include?(k) || k.start_with?('fact_')
       end.sort do |a, b|
@@ -422,7 +432,7 @@ module Razor::Data
 
     def destroy
       super
-      Razor::Data::Hook.run('node-deleted', node: self)
+      Razor::Data::Hook.trigger('node-deleted', node: self)
     end
 
     # Use the facts +facts+ to fully register the node; this is a
@@ -472,7 +482,7 @@ module Razor::Data
           kill_node.destroy
         end
         keep_node.save
-        Razor::Data::Hook.run('node-registered', node: keep_node)
+        Razor::Data::Hook.trigger('node-registered', node: keep_node)
         keep_node
       end
     end
@@ -484,7 +494,7 @@ module Razor::Data
       node.boot_count += 1
       if name == "finished" and node.policy
         node.installed = node.policy.name
-        Razor::Data::Hook.run('node-install-finished', node: self)
+        Razor::Data::Hook.trigger('node-install-finished', node: node)
       end
       node.save
     end

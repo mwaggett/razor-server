@@ -7,6 +7,8 @@ Node metadata can be added, changed, or removed with this command; it contains
 a limited editing language to make changes to the existing metadata in an
 atomic fashion.
 
+Values to keys in update operations can be structured data such as arrays and hashes.
+
 It can also clear all metadata from a node, although that operation is
 exclusive to all other editing operations, and cannot be performed atomically
 with them.
@@ -20,10 +22,10 @@ modify an existing value already present on a node:
         "node": "node1",
         "update": {
             "key1": "value1",
-            "key2": "value2"
+            "key2": [ "val1", "val2", "val3" ]
         }
         "remove": ["key3", "key4"],
-        "no-replace": true
+        "no_replace": true
     }
 
 Removing all node metadata:
@@ -36,7 +38,7 @@ Editing node metadata, by adding and removing some keys, but refusing to
 modify an existing value already present on a node:
 
     razor modify-node-metadata --node node1 --update key1=value1 \\
-        --update key2=value2 --remove key3 --remove key4 --noreplace
+        --update key2='[ "val1", "val2", "val3" ]' --remove key3 --remove key4 --noreplace
 
 Removing all node metadata:
 
@@ -55,7 +57,7 @@ Removing all node metadata:
     either 'update' or 'remove'.
   HELP
 
-  attr 'no-replace', type: :bool, help: _(<<-HELP)
+  attr 'no_replace', type: :bool, help: _(<<-HELP)
     If true, the `update` operation will cause this command to fail if the
     metadata key is already present on the node.  No effect on `remove` or
     clear.
@@ -71,19 +73,16 @@ Removing all node metadata:
         request.error 422, :error => _('cannot update and remove the same key')
     end
 
-    data['no_replace'] = data['no-replace']
-
     node = Razor::Data::Node[:name => data.delete('node')]
     node.modify_metadata(data)
   end
 
   def self.conform!(data)
     data.tap do |_|
-      data['no-replace'] = data.delete('no_replace') if data.has_key?('no_replace')
       data['clear'] = true if data['clear'] == 'true'
       data['clear'] = false if data['clear'] == 'false'
-      data['no-replace'] = true if data['no-replace'] == 'true'
-      data['no-replace'] = false if data['no-replace'] == 'false'
+      data['no_replace'] = true if data['no_replace'] == 'true'
+      data['no_replace'] = false if data['no_replace'] == 'false'
     end
   end
 end

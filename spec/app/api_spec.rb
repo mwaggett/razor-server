@@ -119,6 +119,30 @@ describe "command and query API" do
         last_response.status.should == 200
       end
     end
+
+    describe "securing /api" do
+      it "should allow secure when secure_api is true" do
+        Razor.config['secure_api'] = true
+        get "/api", {}, 'HTTPS' => 'on'
+        last_response.status.should == 200
+      end
+      it "should allow secure when secure_api is false" do
+        Razor.config['secure_api'] = false
+        get "/api", {}, 'HTTPS' => 'on'
+        last_response.status.should == 200
+      end
+      it "should disallow insecure when secure_api is true" do
+        Razor.config['secure_api'] = true
+        get "/api", {}, 'HTTPS' => 'off'
+        last_response.status.should == 404
+        last_response.json['error'].should == 'API requests must be over SSL (secure_api config property is enabled)'
+      end
+      it "should allow insecure when secure_api is false" do
+        Razor.config['secure_api'] = false
+        get "/api", {}, 'HTTPS' => 'off'
+        last_response.status.should == 200
+      end
+    end
   end
 
   context "/api/collections/policies - policy list" do
@@ -383,7 +407,7 @@ describe "command and query API" do
       '$schema'  => 'http://json-schema.org/draft-04/schema#',
       'title'    => "Broker Collection JSON Schema",
       'type'     => 'object',
-      'required' => %w[spec id name configuration broker-type],
+      'required' => %w[spec id name configuration broker_type],
       'properties' => {
         'spec' => {
           '$schema'  => 'http://json-schema.org/draft-04/schema#',
@@ -400,7 +424,7 @@ describe "command and query API" do
           'type'     => 'string',
           'pattern'  => '^[a-zA-Z0-9 ]+$'
         },
-        'broker-type' => {
+        'broker_type' => {
           '$schema'  => 'http://json-schema.org/draft-04/schema#',
           'type'     => 'string',
           'pattern'  => '^[a-zA-Z0-9 ]+$'
@@ -747,6 +771,11 @@ describe "command and query API" do
       let :names do [] end
       before :each do
         5.times { names.push(Fabricate(:node).name) }
+        # Verify that the array of names matches what's on the server.
+        get "/api/collections/nodes"
+        last_response.json['error'].should be_nil
+        last_response.status.should == 200
+        last_response.json['items'].map {|e| e['name']}.should == names
       end
       it "should show limited nodes" do
         get "/api/collections/nodes?limit=2"
@@ -965,7 +994,7 @@ describe "command and query API" do
         '$schema'  => 'http://json-schema.org/draft-04/schema#',
         'title'    => "Hook Collection JSON Schema",
         'type'     => 'object',
-        'required' => %w[spec id name hook-type],
+        'required' => %w[spec id name hook_type],
         'properties' => {
             'spec' => {
                 '$schema'  => 'http://json-schema.org/draft-04/schema#',
@@ -982,7 +1011,7 @@ describe "command and query API" do
                 'type'     => 'string',
                 'pattern'  => '^[^\n]+$'
             },
-            'hook-type' => {
+            'hook_type' => {
                 '$schema'  => 'http://json-schema.org/draft-04/schema#',
                 'type'     => 'string',
                 'pattern'  => '^[a-zA-Z0-9 ]+$'
@@ -1133,6 +1162,12 @@ describe "command and query API" do
       7.times.each do |i|
         last_response.body.should =~ /^[^#]*dhcp\s+net#{i}/m
       end
+    end
+
+    it "accepts a http_port parameter" do
+      get "/api/microkernel/bootstrap?http_port=8150"
+      last_response.status.should == 200
+      last_response.body.should =~ /:8150/
     end
   end
 

@@ -9,7 +9,7 @@ As developers, we promise good compatibility and support for your client if
 you follow the simple rule: use navigation, rather than client-side knowledge
 of the URL structure.
 
-To do that, implement any action by starting at `http://razor:8080/api`,
+To do that, implement any action by starting at `https://razor:8150/api`,
 rather than anywhere else in the API namespace.  This document then allows you
 to navigate -- much like a web browser can navigate a website -- through the
 various query options available to you.
@@ -53,7 +53,7 @@ type on the same server.
 
 ### `/api` document reference
 
-When you fetch `http://razor:8080/api`, you fetch the top level entry point
+When you fetch `https://razor:8150/api`, you fetch the top level entry point
 for navigating through our command and query facilities.  The structure of
 this document is a JSON object with the following keys:
 
@@ -105,12 +105,12 @@ There are three flavors of repositories: ones where Razor unpacks ISO's for
 you and serves their contents, ones that are somewhere else (For example,
 on a mirror you maintain), and ones where a stub directory is created and
 the contents can be entered manually. The first form is created by creating a
-repo with the `iso-url` property; the server will download and unpack the
+repo with the `iso_url` property; the server will download and unpack the
 ISO image into its file system:
 
     {
       "name": "fedora19",
-      "iso-url": "file:///tmp/Fedora-19-x86_64-DVD.iso"
+      "iso_url": "file:///tmp/Fedora-19-x86_64-DVD.iso"
       "task": "puppet"
     }
 
@@ -191,10 +191,10 @@ To create a broker, clients post the following to the `create-broker` URL:
          "server": "puppet.example.org",
          "environment": "production"
       },
-      "broker-type": "puppet"
+      "broker_type": "puppet"
     }
 
-The `broker-type` must correspond to a broker that is present on the
+The `broker_type` must correspond to a broker that is present on the
 `broker_path` set in `config.yaml`.
 
 The permissible settings for the `configuration` hash depend on the broker
@@ -320,7 +320,7 @@ accept the same body, consisting of the name of the policy in question:
       "name": "a policy"
     }
 
-### Modify the max-count for a policy
+### Modify the max_count for a policy
 
 The command `modify-policy-max-count` makes it possible to manipulate how
 many nodes can be bound to a specific policy at the most. The body of the
@@ -328,12 +328,17 @@ request should be of the form:
 
     {
       "name": "a policy"
-      "max-count": new-count
+      "max_count": new-count
     }
 
 The `new-count` can be an integer, which must be larger than the number of
-nodes that are currently bound to the policy, or `null` to make the policy
-unbounded
+nodes that are currently bound to the policy. Alternatively, the `no_max_count`
+argument will make the policy unbounded:
+
+    {
+      "name": "a policy"
+      "no_max_count": true
+    }
 
 ### Add/remove tags to/from Policy
 
@@ -349,6 +354,20 @@ new tag:
       "rule": "new-match-expression" #Only for `add-policy-tag`
     }
 
+### Update policy task
+
+This ensures that a specified policy uses the task this command specifies,
+setting the task if necessary. If a node is currently provisioning against the
+policy when you run this command, provisioning errors may occur.
+
+    The following shows how to update a policy’s task to a task called “other_task”.
+
+    {
+    "node": "node1",
+    "policy": "my_policy",
+    "task": "other_task"
+    }
+
 ### Delete policy
 
 Policies can be deleted with the `delete-policy` command.  It accepts the
@@ -362,22 +381,79 @@ Note that this does not affect the `installed` status of a node, and
 therefore won't, by itself, cause a node to be bound to another policy upon
 reboot.
 
+### Update repo task
+
+This ensures that a specified repo uses the task this command specifies,
+setting the task if necessary. If a node is currently provisioning against the
+repo when you run this command, provisioning errors may occur.
+
+    The following shows how to update a repo’s task to a task called “other_task”.
+
+    {
+    "node": "node1",
+    "repo": "my_repo",
+    "task": "other_task"
+    }
+
+    The following shows how to update a repo’s task to its repo's task.
+
+    {
+    "node": "node1",
+    "repo": "my_repo",
+    "no_task": true
+    }
+
 ### Create hook
 
 A hook can be created with the `create-hook` command.  It accepts the name
-of a single hook, plus the `hook-type` which references existing code
+of a single hook, plus the `hook_type` which references existing code
 on the Razor server's `hooks` directory, and an optional starting
-configuration corresponding to that hook-type:
+configuration corresponding to that hook_type:
 
     {
       "name": "myhook",
-      "hook-type": "some_hook",
+      "hook_type": "some_hook",
       "configuration": {"foo": 7, "bar": "rhubarb"}
     }
 
 The code on the server would be contained in the `hooks/some_hook.hook`
 directory. More information on hooks can be found in the Hooks README 
 (`hooks.md`).
+
+### Update hook configuration
+
+A hook's configuration can be updated using the `update-hook-configuration`
+command. This command can set or clear a single key's value. The following
+arguments would set the configuration value for key `some_key` to `new_value`:
+
+    {
+      "hook": "myhook",
+      "key": "some_key",
+      "value": "new_value"
+    }
+
+The following arguments would clear the configuration value for key `some_key`:
+
+    {
+      "hook": "myhook",
+      "key": "some_key",
+      "clear": true
+    }
+
+### Run hook
+
+The `run-hook` command triggers a hook to execute. This is helpful when writing
+your own hook scripts in testing their validity. To run the hook which would
+occur when the given node boots, use the following arguments:
+
+    {
+      "name": "myhook",
+      "node": "node1",
+      "event": "node-booted"
+    }
+
+Note that any of the usual event names can be used for the `event` argument.
+See `hooks.md` for a list of these possibilities.
 
 ### Delete hook
 
@@ -430,9 +506,9 @@ The structure of a request is:
 
     {
       "name": "node17",
-      "ipmi-hostname": "bmc17.example.com",
-      "ipmi-username": null,
-      "ipmi-password": "sekretskwirrl"
+      "ipmi_hostname": "bmc17.example.com",
+      "ipmi_username": null,
+      "ipmi_password": "sekretskwirrl"
     }
 
 The various IPMI fields can be null (representing no value, or the NULL
@@ -537,6 +613,16 @@ however, clear can only be done on its own (it doesnt make sense to
 update some details and then clear everything).  An error will also be
 returned if an attempt is made to update and remove the same key.
 
+Note that metadata values can also be structured data specified as native
+JSON or as a valid JSON string.  E.g:
+
+    {
+        "node": "node1",
+        "update": {
+            "key1": [ "list", "of", "values" ],
+        }
+    }
+
 ### Update node metadata
 
 The `update-node-metadata` command is a shortcut to `modify-node-metadata`
@@ -548,6 +634,15 @@ request with a simple data structure that looks like.
         "key"       : "my_key",
         "value"     : "my_val",
         "no_replace": true       #Optional. Will not replace existing keys
+    }
+
+Note that metadata values can also be structured data specified as native
+JSON or as a valid JSON string.  E.g:
+
+    {
+        "node"      : "mode1",
+        "key"       : "my_key",
+        "value"     : "[ "list", "of", "values" ]",
     }
 
 ### Remove Node Metadata
@@ -612,14 +707,14 @@ key-value pairs. For example, here is a sample tag listing:
 
     [
       {
-        "spec": "http://localhost:8080/spec/object/tag",
-        "id": "http://localhost:8080/api/collections/objects/14",
+        "spec": "https://localhost:8150/spec/object/tag",
+        "id": "https://localhost:8150/api/collections/objects/14",
         "name": "virtual",
         "rule": [ "=", [ "fact", "is_virtual" ], true ]
       },
       {
-        "spec": "http://localhost:8080/spec/object/tag",
-        "id": "http://localhost:8080/api/collections/objects/27",
+        "spec": "https://localhost:8150/spec/object/tag",
+        "id": "https://localhost:8150/api/collections/objects/27",
         "name": "group 4",
         "rule": [
           "in", [ "fact", "dhcp_mac" ],
@@ -658,7 +753,7 @@ For example the UUID could be queried to return the associated node
     {
       "items": [
         {
-            "id": "http://razor.example.com:8080/api/collections/nodes/node14",
+            "id": "https://razor.example.com:8150/api/collections/nodes/node14",
             "name": "node14",
             "spec": "http://api.puppetlabs.com/razor/v1/collections/nodes/member"
         }],
@@ -676,3 +771,12 @@ culminates in chain loading from the Razor server)
 The URL accepts the parameter `nic_max` which should be set to the maximum
 number of network interfaces that respond to DHCP on any given machine. It
 defaults to 4.
+
+If this request to generate the bootstrap file occurs over HTTPS, the
+`http_port` parameter must be supplied. This is the HTTP (non-SSL/TLS) port
+number that booted nodes will use to communicate with the Razor server.
+
+A full request to render a bootstrap file might look like this, where 8150 is
+the port used for HTTP communication:
+`curl -k "https://user:password@razor-server:8151/api/microkernel/bootstrap?nic_max=4&http_port=8150"`
+

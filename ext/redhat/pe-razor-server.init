@@ -8,21 +8,23 @@
 # pidfile: /var/run/pe-razor-server.pid
 
 NAME="pe-razor-server"
+REALNAME="razor-server"
 WAIT=30 # seconds
 
 # Set defaults.
-TORQUEBOX_HOME="/opt/puppet/share/torquebox"
+JAVA="/opt/puppetlabs/server/bin/java"
+TORQUEBOX_HOME="/opt/puppetlabs/server/apps/razor-server/share/torquebox"
 JBOSS_HOME="${TORQUEBOX_HOME}/jboss"
 JRUBY_HOME="${TORQUEBOX_HOME}/jruby"
-export TORQUEBOX_HOME JBOSS_HOME JRUBY_HOME
+export JAVA TORQUEBOX_HOME JBOSS_HOME JRUBY_HOME
 
 PATH="${JRUBY_HOME}/bin:${PATH}"
 export PATH
 
-JBOSS_PIDFILE="/var/run/${NAME}/torquebox.pid"
+JBOSS_PIDFILE="/var/run/puppetlabs/${REALNAME}/torquebox.pid"
 export JBOSS_PIDFILE
 
-JBOSS_LOG_DIR="/var/log/${NAME}"
+JBOSS_LOG_DIR="/var/log/puppetlabs/${REALNAME}"
 JBOSS_CONSOLE_LOG="${JBOSS_LOG_DIR}/console.log"
 export JBOSS_LOG_DIR JBOSS_CONSOLE_LOG
 
@@ -42,7 +44,14 @@ export LANG=en_US.UTF-8
 
 # Load overrides and defaults. Fail if it isn't there.
 [ -e "/etc/sysconfig/${NAME}" ] || exit 1
+# Enable variable auto-exporting when we source the
+# sysconfig file so that the exec below doesn't drop
+# the variables set here. We can't export the vars
+# inside the sysconfig file due to the way systemd
+# parses the file.
+set -a
 [ -e "/etc/sysconfig/${NAME}" ] && . "/etc/sysconfig/${NAME}"
+set +a
 
 start() {
     echo -n "Launching ${NAME}: "
@@ -106,7 +115,7 @@ start() {
 # subordinate user, and start in the background.
 run() {
     exec >&"${JBOSS_CONSOLE_LOG}" \
-        "${JBOSS_SCRIPT}" "-Djboss.server.log.dir=${JBOSS_LOG_DIR}" "-Dhttp.port=${RAZOR_PORT}" \
+        "${JBOSS_SCRIPT}" "-Djboss.server.log.dir=${JBOSS_LOG_DIR}" "-Dhttp.port=${HTTP_PORT}" "-Dhttps.port=${HTTPS_PORT}" \
         "-b" "0.0.0.0"
 }
 

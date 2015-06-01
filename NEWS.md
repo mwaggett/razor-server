@@ -1,5 +1,74 @@
 # Razor Server Release Notes
 
+## Next.Next - TBD
+
+### Other
+
++ NEW: The `update-hook-configuration` command allows changing an existing
+  hook's configuration, which should help with hook script creation.
++ NEW: The `run-hook` command allows arbitrary execution of a hook.
++ NEW: The `store_hook_input` and `store_hook_output` config settings can
+  toggle storing the input and output for a hook script in the event log. These
+  are disabled by default.
+
+## Next - TBD
+
+### Incompatible changes
+
++ Some of the stock tasks have been renamed. If you used the previous ubuntu
+  tasks, these have been changed to a more standard naming scheme. The `ubuntu`
+  task points to Trusty, and the others are `ubuntu/precise` and `ubuntu/lucid`
+  instead of the previous longer names e.g. `ubuntu_precise_amd64`. Use the new
+  commands `update-policy-task` and `update-repo-task` to change existing
+  policies and repos to use these new task names.
++ `modify_policy_max_count` now uses `no_max_count` to indicate that the
+  policy should be unbounded.
+
+### Other
+
++ NEW: The `update-policy-task` command can be used to migrate policies if the
+  associated task's name changes.
++ NEW: The `update-repo-task` command can be used to migrate repos if the
+  associated task's name changes.
++ NEW: The `secure_api` config property can be used to ensure that
+  communications with /api are secure. When this is true, all calls to the
+  namespace need to be over HTTPS with SSL, and otherwise will return a 404.
+  The actual configuration of this happens in Torquebox's configuration. By
+  default, this property is false (no change from current behavior).
++ IMPROVEMENT: `HTTP_PORT` and `HTTPS_PORT` will be used to set the ports for
+  HTTP and HTTPS communication instead of `RAZOR_PORT`
++ NEW: If the razor-server is configured to use SSL, any HTTPS calls to
+  /api/microkernel/bootstrap must include the `http_port` argument.
++ BUGFIX: Any metadata that returned an array or hash caused unreliable
+  behavior when referenced in tags. This will now return a helpful error.
++ IMPROVEMENT: The task link in `create-policy` is now optional, deferring to
+  the task in the repo if not provided.
++ NEW: Configuration now allows a defaults file. The RAZOR_CONFIG_DEFAULTS
+  environment variable can tell Razor where this file exists, or it will
+  look for /opt/razor/config-defaults.yaml by default. Any config absent from
+  the normal config.yaml file will be pulled from here next.
++ IMPROVEMENT: The redhat task now allows node metadata to run the RHN
+  subscription command. `rhn_username`, `rhn_password`, and `rhn_activationkey`
+  can be used for this. See the README.md inside the task for more information.
++ IMPROVEMENT: MAC addresses supplied with 'net' prefixes will now be
+  standardized to match those in the 'mac' fact.
++ NEW: Metadata can now be structured. If the metadata is either an array or an
+  object, this can be used in tasks, hooks, and brokers, but not tags currently.
++ IMPROVEMENT: Each stock task that references node metadata now has a README.md
+  file that describes the values it uses.
++ IMPROVEMENT: The redhat task now uses the node's "timezone" metadata value to
+  set the time
++ IMPROVEMENT: Now using a later version of the Sequel gem.
++ IMPROVEMENT: Better logging when files are being retrieved from Razor in
+  brokers and tasks.
++ IMPROVEMENT: API standardized to use underscores for property names.
++ NEW: `aliases` added to API for better datatype recognition in argument
+  metadata.
++ IMPROVEMENT: The hooks.md file has been revamped, now including a full
+  example.
++ BUGFIX: Tags on policies are now being serialized properly when passed to the
+  hook as input.
+
 ## 0.16.1 - 2015-01-12
 
 ### Other

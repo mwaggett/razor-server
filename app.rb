@@ -64,6 +64,10 @@ and requires full control over the database (eg: add and remove tables):
     # --daniel 2013-06-26
     request.preferred_type('application/json') or
       halt [406, {"error" => _("only application/json content is available")}.to_json]
+
+    if Razor.config['secure_api']
+      request.secure? or halt [404, {"error" => _("API requests must be over SSL (secure_api config property is enabled)")}.to_json]
+    end
   end
 
   #
@@ -201,7 +205,13 @@ and requires full control over the database (eg: add and remove tables):
       end
       ["dhcp_mac", "serial", "asset", "uuid"].each { |k| vars[k] = "${#{k}}" }
       q = vars.map { |k,v| "#{k}=#{v}" }.join("&")
-      url "/svc/boot?#{q}"
+      # Sinatra's URL generation is not robust, meaning changes need to happen
+      # as string substitutions.
+      (url "/svc/boot?#{q}").
+           sub(/\Ahttps:/, 'http:').
+           # The port may be either absent or present; make the paths converge
+           sub(/\/\/#{request.host_with_port}/, "//#{request.host}").
+           sub(/http:\/\/#{request.host}/, "http://#{request.host}:#{@bootstrap_port}")
     end
 
     # Information to include on the microkernel kernel command line that
@@ -384,7 +394,7 @@ and requires full control over the database (eg: add and remove tables):
                        :template => template)
     end
     @node.save
-    Razor::Data::Hook.run('node-booted', node: @node)
+    Razor::Data::Hook.trigger('node-booted', node: @node)
     render_template(template)
   end
 
@@ -401,10 +411,20 @@ and requires full control over the database (eg: add and remove tables):
     @task = @node.task
     @repo = @node.policy.repo
 
+    begin
+      fpath = @task.find_file(params[:filename])
+    rescue Razor::TemplateNotFoundError => e
+      @node.log_append(:event => :get_raw_file,
+                       :msg => _("raw task file %{script} not found") % {script: params[:filename]},
+                       :severity => 'error', :url => request.url)
+      raise e
+    end
+
+    unless fpath
+    end
     @node.log_append(:event => :get_raw_file, :template => params[:filename],
                      :url => request.url)
 
-    fpath = @task.find_file(params[:filename]) or halt 404
     content_type nil
     send_file fpath, :disposition => nil
   end
@@ -419,23 +439,40 @@ and requires full control over the database (eg: add and remove tables):
     @task = @node.task
     @repo = @node.policy.repo
 
-    @node.log_append(:event => :get_file, :template => params[:template],
-                     :url => request.url)
-
-    render_template(params[:template])
+    begin
+      render_template(params[:template]).tap do |_|
+          @node.log_append(:event => :get_task_file, :template => params[:template],
+                           :url => request.url)
+      end
+    rescue Razor::TemplateNotFoundError => e
+      @node.log_append(:event => :get_task_file, :script => params[:template],
+                       :msg => _("task file %{script} not found") % {script: params[:template]},
+                       :severity => 'error', :url => request.url)
+      raise e
+    end
   end
 
   # This accepts a `script` parameter, which defaults to `install` for the file `install.erb`.
   get '/svc/broker/:node_id/install' do
-    node = Razor::Data::Node[params[:node_id]]
-    halt 404 unless node
-    error 409, :error => _("node %{node} not bound to a policy yet") % {node: node.id} unless node.policy
+    @node = Razor::Data::Node[params[:node_id]]
+    halt 404 unless @node
+    error 409, :error => _("node %{node} not bound to a policy yet") % {node: @node.id} unless @node.policy
 
     content_type 'text/plain'   # @todo danielp 2013-09-24: ...or?
     script_name = params['script'] || 'install'
     begin
-      node.policy.broker.install_script_for(node, script_name)
+      # The stage_done_url needs to be generated in Sinatra, so we calculate it here and pass it on.
+      stage_done_url = stage_done_url('broker')
+      @node.policy.broker.install_script_for(@node, script_name,
+                                            'stage_done_url' => stage_done_url,
+                                            'log_url' => (url("/svc/log/#{@node.id}"))).tap do |_|
+        @node.log_append(:event => :get_broker_file,
+                         :script => script_name, :url => request.url)
+      end
     rescue Razor::InstallTemplateNotFoundError => e
+      @node.log_append(:event => :get_broker_file,
+                       :msg => _("broker install file %{script} not found") % {script: script_name},
+                       :severity => 'error', :url => request.url)
       error 404, :error => _("install template %{name}.erb does not exist") % {name: script_name},
             :details => e.to_s
     end
@@ -443,7 +480,12 @@ and requires full control over the database (eg: add and remove tables):
 
   get '/svc/log/:node_id' do
     node = Razor::Data::Node[params[:node_id]] if params[:node_id]
-    halt 404 unless node
+    unless node
+      Razor::Data::Event.log_append(:event => :log_to_node,
+                     :msg => _("node %{node} not found to log") % {node: params[:node_id]},
+                     :severity => 'error', :original_msg => params[:msg])
+      error 404, :error => _("node %{node}.erb does not exist") % {node: params[:node_id]}
+    end
     entry = {:msg => params[:msg]}
     entry = JSON::parse(entry.to_json)
     event = Razor::Data::Event.new({:entry => entry})
@@ -489,6 +531,10 @@ and requires full control over the database (eg: add and remove tables):
       content_type nil
       send_file fpath, :disposition => nil
     else
+      # This method is called so many times that we only want to report errors.
+      Razor::Data::Event.log_append(:event => :get_file,
+          :msg => _("repo file %{path} not found") % {path: path}, :severity => 'error',
+          :url => request.url)
       [404, { :error => _("File %{path} not found") % {path: path} }.to_json ]
     end
   end
@@ -702,7 +748,7 @@ and requires full control over the database (eg: add and remove tables):
   end
 
   get '/api/collections/nodes' do
-    collection_view Razor::Data::Node.search(params).order(:name), 'nodes', limit: params[:limit], start: params[:start]
+    collection_view Razor::Data::Node.search(params).order(:id), 'nodes', limit: params[:limit], start: params[:start]
   end
 
   get '/api/collections/nodes/:name' do
@@ -734,11 +780,32 @@ and requires full control over the database (eg: add and remove tables):
       error 400,
         :error => _("The nic_max parameter must be an integer not starting with 0")
 
+    params['http_port'].nil? and request.secure? and
+      error 400,
+        :error => _("The `http_port` argument must be supplied for bootstrap generation on a secure port")
+
+    @bootstrap_port = params['http_port'].nil? ? request.port.to_s : params['http_port']
+
     # How many NICs ipxe should probe for DHCP
     @nic_max = params["nic_max"].nil? ? 4 : params["nic_max"].to_i
 
     @task = Razor::Task.mk_task
 
     render_template("bootstrap")
+  end
+
+  get '/api/collections/message-queue' do
+    Hash[TorqueBox::Messaging::Queue.list.map do |queue|
+      [queue.name, {'count' => queue.count_messages}]
+    end].to_json
+  end
+
+  post '/api/commands/dequeue-message-queues' do
+    # Remove these by name so we only get our queues.
+    Hash[['/queues/razor/sequel-instance-messages', '/queues/razor/sequel-hooks-messages'].map do |queue_name|
+      queue = TorqueBox.fetch(queue_name)
+      count = queue.remove_messages
+      [queue.name, count > 0 ? "removed #{count} messages" : "no changes"]
+    end].to_json
   end
 end
