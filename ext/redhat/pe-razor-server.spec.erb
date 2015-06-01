@@ -1,23 +1,20 @@
-%global p_vendor       pe
-%global _name          razor-server
+%global upstream_name  razor-server
 %global realversion    <%= @version %>
 %global rpmversion     <%= @rpmversion %>
 %global _service_name  pe-razor
 
-%if 0%{?p_vendor:1}
-    %global name_prefix      %{p_vendor}-
 
-    # Override the _prefix last, so we can get the _real_* locations.
-    %{!?_orig_prefix:     %global _orig_prefix     %{_prefix}}
-    %{!?_real_initrddir:  %global _real_initrddir  %{_initrddir}}
-    %{!?_real_sysconfdir: %global _real_sysconfdir %{_sysconfdir}}
-    %global               _initrddir  %{_real_initrddir}
-    %global               _sysconfdir %{_real_sysconfdir}/puppetlabs
-    %global               _prefix     /opt/puppet
-    %global               _datadir    %{_prefix}/share
-    %global               _mandir     %{_datadir}/man
-    %global               _bindir     %{_prefix}/bin
-%endif
+# Override the _prefix last, so we can get the _real_* locations.
+%{!?_real_initrddir:  %global _real_initrddir  %{_initrddir}}
+%{!?_real_sysconfdir: %global _real_sysconfdir %{_sysconfdir}}
+%global               _initrddir        %{_real_initrddir}
+%global               _sysconfdir       %{_real_sysconfdir}/puppetlabs
+%global               _prefix           /opt/puppetlabs/server/apps/razor-server
+%global               _datadir          %{_prefix}/share
+%global               _mandir           /opt/puppetlabs/server/man
+%global               _bindir           %{_prefix}/bin
+%global               _pe_server_bindir /opt/puppetlabs/server/bin
+%global               _agent_bindir     /opt/puppetlabs/bin
 
 %global _with_systemd  0
 %global _with_sysvinit 0
@@ -44,14 +41,14 @@
 %endif
 
 
-%define _java_home  JAVA_HOME=/opt/puppet/lib/jvm/pe-java/jre
-%define _javacmd    JAVACMD=/opt/puppet/bin/java
-%define _jruby      %{_java_home} %{_javacmd} %{_datadir}/torquebox/jruby/bin/jruby -S
-%define _bundle     %{_jruby} bundle
-%define _rake       %{_jruby} rake
+%global _java_home  JAVA_HOME=/opt/puppetlabs/server/apps/java/lib/jvm/java/jre
+%global _javacmd    JAVACMD=/opt/puppetlabs/server/bin/java
+%global _jruby      %{_java_home} %{_javacmd} %{_datadir}/torquebox/jruby/bin/jruby -S
+%global _bundle     %{_jruby} bundle
+%global _rake       %{_jruby} rake
 
 Summary:        Razor is an advanced provisioning application
-Name:           %{?name_prefix}%{_name}
+Name:           pe-razor-server
 Version:        %{rpmversion}
 Release:        <%= @rpmrelease -%>.pe%{?dist}
 Vendor:         Puppet Labs
@@ -64,8 +61,8 @@ BuildArch:      noarch
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 AutoProv:       0
 
-Requires:       %{?name_prefix}razor-libs
-BuildRequires:  %{?name_prefix}razor-libs
+Requires:       pe-razor-libs
+BuildRequires:  pe-razor-libs
 %if 0%{?_rhel_systemd}
 Requires(post):   systemd
 Requires(preun):  systemd
@@ -107,9 +104,11 @@ mkdir -p %{buildroot}%{_datadir}/razor-server/bin
 mkdir -p %{buildroot}%{_prefix}/var/razor
 mkdir -p %{buildroot}%{_initrddir}
 mkdir -p %{buildroot}%{_bindir}
+mkdir -p %{buildroot}%{_pe_server_bindir}
+mkdir -p %{buildroot}%{_agent_bindir}
 mkdir -p %{buildroot}%{_sysconfdir}/razor
 mkdir -p %{buildroot}/etc/sysconfig
-mkdir -p %{buildroot}/var/log/%{name}
+mkdir -p %{buildroot}/var/log/puppetlabs/%{upstream_name}
 
 # Install the init script and sysconfig file
 %if 0%{?_with_systemd}
@@ -117,7 +116,7 @@ install -d -m0755  %{buildroot}%{_unitdir}
 install -m0644 ext/redhat/%{name}.service %{buildroot}%{_unitdir}/
 install -d -m0755 %{buildroot}%{_datadir}/%{_name}
 install -m0644 ext/redhat/%{name}.env %{buildroot}%{_datadir}/%{_name}/
-install -d -m0755 %{buildroot}/run/%{name}
+install -d -m0755 %{buildroot}/var/run/puppetlabs/%{upstream_name}
 install -d %{buildroot}%{_tmpfilesdir}
 install -m0644 ext/redhat/%{name}-tmpfiles.conf %{buildroot}%{_tmpfilesdir}/%{name}.conf
 %else
@@ -130,10 +129,10 @@ rm -rf ext/debian ext/redhat ext/build_defaults.yaml ext/packaging.rake ext/proj
 
 # Bundle me if you want to live
 # Install the production gemset
-%{_bundle} install --shebang /opt/puppet/bin/jruby --local --deployment --path $RPM_BUILD_ROOT%{_datadir}/razor-server/vendor/bundle --without development test doc
+%{_bundle} install --shebang %{_pe_server_bindir}/jruby --local --deployment --path $RPM_BUILD_ROOT%{_datadir}/razor-server/vendor/bundle --without development test doc
 # Finally, we can remove the cached gems since we're not using them for install again
 rm -rf vendor/bundle/jruby/1.9/cache
-# Since we don't want dashboard's BUNDLE_PATH to be set to /tmp/builddir/..., we have to set it manually here
+# Since we don't want razor's BUNDLE_PATH to be set to /tmp/builddir/..., we have to set it manually here
 %{_bundle} config --local PATH %{_datadir}/razor-server/vendor/bundle
 
 # Copy the other stuff.
@@ -145,9 +144,17 @@ cp -p   bin/razor-admin %{buildroot}%{_datadir}/razor-server/bin
 cp -p   bin/razor-admin-wrapper %{buildroot}%{_bindir}/razor-admin
 cp -p   config.yaml.sample %{buildroot}%{_sysconfdir}/razor
 cp -pr  locales %{buildroot}%{_datadir}/razor-server/locales
+# Symlink the wrapper to the server bindir
+pushd %{buildroot}%{_pe_server_bindir}
+  %{__ln_s} ../apps/%{upstream_name}/bin/*
+popd
+# Symlink the wrapper to the agent bindir
+pushd %{buildroot}%{_agent_bindir}
+  %{__ln_s} ../server/apps/%{upstream_name}/bin/*
+popd
 
 # Munge the shebang on razor-admin to point to the correct jruby instance for PE
-sed -i 's,#! /usr/bin/env jruby,#!/opt/puppet/bin/jruby,g' %{buildroot}%{_datadir}/razor-server/bin/razor-admin
+sed -i 's,#! /usr/bin/env jruby,#!%{_prefix}/bin/jruby,g' %{buildroot}%{_datadir}/razor-server/bin/razor-admin
 
 %pre
 %if 0%{?_sles_systemd}
@@ -156,7 +163,7 @@ sed -i 's,#! /usr/bin/env jruby,#!/opt/puppet/bin/jruby,g' %{buildroot}%{_datadi
 if [ $1 -gt 1 ]; then
   (
     cd %{_datadir}/razor-server;
-    /opt/puppet/sbin/torquebox undeploy > /dev/null 2>&1 ||:
+    %{_prefix}/sbin/torquebox undeploy > /dev/null 2>&1 ||:
   )
 fi
 
@@ -175,12 +182,12 @@ fi
 
 if [ $1 -gt 1 ]; then
   if [ -f /etc/puppetlabs/razor/config.yaml ]; then
-    /opt/puppet/bin/razor-admin migrate-database > /dev/null 2>&1 ||:
+    %{_agent_bindir}/razor-admin migrate-database > /dev/null 2>&1 ||:
   fi
 fi
   (
     cd %{_datadir}/razor-server;
-    /opt/puppet/sbin/torquebox deploy > /dev/null 2>&1 ||:
+    %{_prefix}/sbin/torquebox deploy > /dev/null 2>&1 ||:
   )
 
 %preun
@@ -202,7 +209,7 @@ fi
 if [ $1 -eq 0 ] ; then
   (
     cd %{_datadir}/razor-server;
-    /opt/puppet/sbin/torquebox undeploy > /dev/null 2>&1 ||:
+    %{_prefix}/sbin/torquebox undeploy > /dev/null 2>&1 ||:
   )
 fi
 
@@ -228,15 +235,17 @@ rm -rf %{buildroot}
 %defattr(-,root,root,-)
 %{_datadir}/razor-server
 %{_bindir}/razor-admin
+%{_pe_server_bindir}/razor-admin
+%{_agent_bindir}/razor-admin
 %dir %{_sysconfdir}/razor
 %{_sysconfdir}/razor/config.yaml.sample
 %attr(-,%{_service_name},%{_service_name}) %dir %{_prefix}/var/razor
-%attr(-,%{_service_name},%{_service_name}) %dir /var/log/%{name}
+%attr(-,%{_service_name},%{_service_name}) %dir /var/log/puppetlabs/%{upstream_name}
 %attr(-,%{_service_name},%{_service_name}) %{_datadir}/razor-server/config.ru
 %if 0%{?_with_systemd}
 %{_unitdir}/%{name}.service
 %{_datadir}/%{_name}/%{name}.env
-%attr(-,%{_service_name},%{_service_name}) %dir /run/%{name}/
+%attr(-,%{_service_name},%{_service_name}) %dir /var/run/puppetlabs/%{upstream_name}/
 %{_tmpfilesdir}/%{name}.conf
 %else
 %{_initrddir}/%{name}
