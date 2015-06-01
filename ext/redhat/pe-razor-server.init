@@ -5,7 +5,7 @@
 # chkconfig: - 80 20
 # description: pe-razor-server
 # processname: standalone
-# pidfile: /var/run/pe-razor-server.pid
+# pidfile: /var/run/puppetlabs/razor-server/razor-server.pid
 
 NAME="pe-razor-server"
 REALNAME="razor-server"
