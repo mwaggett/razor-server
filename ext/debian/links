@@ -1,1 +1,1 @@
-/opt/puppet/share/razor-server/bin/razor-admin /opt/puppet/bin/razor-admin
+/opt/puppetlabs/server/apps/razor-server/share/razor-server/bin/razor-admin /opt/puppetlabs/bin/razor-admin

@@ -7,7 +7,7 @@ confine :except, :roles => %w{master dashboard database frictionless}
 test_name 'QA-1820 - C59743 - create-hook with no configuration attribute and no configuration value'
 step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/59743'
 
-hook_dir      = '/opt/puppet/share/razor-server/hooks'
+hook_dir      = '/opt/puppetlabs/server/apps/razor-server/share/razor-server/hooks'
 hook_type     = 'hook_type_1'
 hook_name     = 'hook_name_2'
 hook_path     = "#{hook_dir}/#{hook_type}.hook"

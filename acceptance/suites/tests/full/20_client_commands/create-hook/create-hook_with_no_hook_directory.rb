@@ -7,7 +7,7 @@ confine :except, :roles => %w{master dashboard database frictionless}
 test_name 'QA-1820 - C63491 - create-hook no hook directory'
 step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/63491'
 
-hook_dir      = '/opt/puppet/share/razor-server/hooks'
+hook_dir      = '/opt/puppetlabs/server/apps/razor-server/share/razor-server/hooks'
 hook_type     = 'does_not_exist'
 hook_name     = 'hookName1'
 
