@@ -7,8 +7,8 @@ confine :except, :roles => %w{master dashboard database frictionless}
 test_name 'Configure Razor server for basic authentication'
 step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/259'
 
-config_yaml = '/etc/puppetlabs/razor/config.yaml'
-shiro_ini = '/etc/puppetlabs/razor/shiro.ini'
+config_yaml = '/etc/puppetlabs/razor-server/config.yaml'
+shiro_ini = '/etc/puppetlabs/razor-server/shiro.ini'
 
 agents.each do |agent|
   begin

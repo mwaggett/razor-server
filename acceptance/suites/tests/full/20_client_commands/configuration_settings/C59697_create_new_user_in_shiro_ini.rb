@@ -7,8 +7,8 @@ confine :except, :roles => %w{master dashboard database frictionless}
 test_name 'Create new user in shiro.ini'
 step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/59697'
 
-config_yaml       = '/etc/puppetlabs/razor/config.yaml'
-shiro_ini         = '/etc/puppetlabs/razor/shiro.ini'
+config_yaml       = '/etc/puppetlabs/razor-server/config.yaml'
+shiro_ini         = '/etc/puppetlabs/razor-server/shiro.ini'
 
 teardown do
   agents.each do |agent|
@@ -35,7 +35,7 @@ agents.each do |agent|
       create_remote_file(agent, "#{shiro_ini}", new_file)
 
       step "Set up users on #{agent}"
-      on(agent, 'cat /etc/puppetlabs/razor/shiro.ini') do |result|
+      on(agent, 'cat /etc/puppetlabs/razor-server/shiro.ini') do |result|
         assert_match /^\s*razor = razor/, result.stdout, 'User razor should already have password "razor"'
       end
 

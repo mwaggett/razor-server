@@ -7,7 +7,7 @@ confine :except, :roles => %w{master dashboard database frictionless}
 test_name 'C62411: Enable auth and authenticate with good user and missing password'
 step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/62411'
 
-config_yaml       = '/etc/puppetlabs/razor/config.yaml'
+config_yaml       = '/etc/puppetlabs/razor-server/config.yaml'
 
 teardown do
   agents.each do |agent|
@@ -27,7 +27,7 @@ agents.each do |agent|
     create_remote_file(agent, "#{config_yaml}", config)
 
     step "Set up users on #{agent}"
-    on(agent, 'cat /etc/puppetlabs/razor/shiro.ini') do |result|
+    on(agent, 'cat /etc/puppetlabs/razor-server/shiro.ini') do |result|
       assert_match(/^\s*razor = razor/, result.stdout, 'User razor should already have password "razor"')
     end
 

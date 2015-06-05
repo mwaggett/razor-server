@@ -182,7 +182,7 @@ fi
 %endif
 
 if [ $1 -gt 1 ]; then
-  if [ -f /etc/puppetlabs/razor/config.yaml ]; then
+  if [ -f /etc/puppetlabs/razor-server/config.yaml ]; then
     %{_agent_bindir}/razor-admin migrate-database > /dev/null 2>&1 ||:
   fi
 fi
