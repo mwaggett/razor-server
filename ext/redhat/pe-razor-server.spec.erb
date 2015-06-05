@@ -239,7 +239,7 @@ rm -rf %{buildroot}
 %{_pe_server_bindir}/razor-admin
 %{_agent_bindir}/razor-admin
 %dir %{_sysconfdir}/razor
-%{_sysconfdir}/razor/config.yaml.sample
+%{_sysconfdir}/razor-server/config.yaml.sample
 %attr(-,%{_service_name},%{_service_name}) %dir %{_prefix}/var/razor
 %attr(-,%{_service_name},%{_service_name}) %dir /var/log/puppetlabs/%{upstream_name}
 %attr(-,%{_service_name},%{_service_name}) %{_datadir}/razor-server/config.ru
