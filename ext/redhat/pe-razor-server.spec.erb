@@ -62,6 +62,7 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 AutoProv:       0
 
 Requires:       pe-razor-libs
+Requires:       pe-puppet-enterprise-release
 BuildRequires:  pe-razor-libs
 %if 0%{?_rhel_systemd}
 Requires(post):   systemd

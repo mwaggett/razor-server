@@ -11,7 +11,7 @@ NAME="pe-razor-server"
 WAIT=30 # seconds
 
 # Set defaults.
-TORQUEBOX_HOME="/opt/puppet/share/torquebox"
+TORQUEBOX_HOME="/opt/puppetlabs/server/apps/razor-server/share/torquebox"
 JBOSS_HOME="${TORQUEBOX_HOME}/jboss"
 JRUBY_HOME="${TORQUEBOX_HOME}/jruby"
 export TORQUEBOX_HOME JBOSS_HOME JRUBY_HOME

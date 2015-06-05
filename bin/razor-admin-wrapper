@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-razor='/opt/puppet/share/razor-server'
-torquebox='/opt/puppet/share/torquebox'
+razor='/opt/puppetlabs/server/apps/razor-server/share/razor-server'
+torquebox='/opt/puppetlabs/server/apps/razor-server/share/torquebox'
 jruby="${torquebox}/jruby"
 
 # Make sure our Gemfile is found by the tool.  This is needed because Bundler

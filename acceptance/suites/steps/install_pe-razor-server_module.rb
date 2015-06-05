@@ -56,7 +56,7 @@ step 'Verify that Razor is installed on the nodes, and our database is correct'
 servers.each do |server|
   retry_on server, 'curl -kf https://localhost:8151/api', :max_retries => 24, :retry_interval => 15
 end
-on servers, '/opt/puppet/bin/razor-admin -e production check-migrations'
+on servers, '/opt/puppetlabs/bin/razor-admin -e production check-migrations'
 
 step 'Install ipmitool on razor server'
 servers.each do |server|

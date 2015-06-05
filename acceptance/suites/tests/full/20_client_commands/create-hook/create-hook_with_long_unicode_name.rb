@@ -7,7 +7,7 @@ confine :except, :roles => %w{master dashboard database frictionless}
 test_name 'QA-1818 - C59715 - create-hook with long unicode name  (250 characters)'
 step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/59715'
 
-hook_dir      = '/opt/puppet/share/razor-server/hooks'
+hook_dir      = '/opt/puppetlabs/server/apps/razor-server/share/razor-server/hooks'
 hook_type     = 'hook_type_1'
 hook_name     = long_unicode_string
 hook_path     = "#{hook_dir}/#{hook_type}.hook"

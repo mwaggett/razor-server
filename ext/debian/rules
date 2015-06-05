@@ -3,8 +3,8 @@
 BUILD_ROOT = $(CURDIR)/debian/tmp
 PE_PREFIX  = opt/puppet
 RZR_NAME   = razor-server
-JAVACMD    = /opt/puppet/bin/java
-JAVA_HOME  = /opt/puppet/lib/jvm/pe-java/jre
+JAVACMD    = /opt/puppetlabs/bin/java
+JAVA_HOME  = /opt/puppetlabs/lib/jvm/pe-java/jre
 JRUBY      = JAVA_HOME=$(JAVA_HOME) JAVACMD=$(JAVACMD) /$(PE_PREFIX)/share/torquebox/jruby/bin/jruby -S
 
 %:
