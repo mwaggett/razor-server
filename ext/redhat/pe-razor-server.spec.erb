@@ -107,7 +107,7 @@ mkdir -p %{buildroot}%{_initrddir}
 mkdir -p %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_pe_server_bindir}
 mkdir -p %{buildroot}%{_agent_bindir}
-mkdir -p %{buildroot}%{_sysconfdir}/razor
+mkdir -p %{buildroot}%{_sysconfdir}/razor-server
 mkdir -p %{buildroot}/etc/sysconfig
 mkdir -p %{buildroot}/var/log/puppetlabs/%{upstream_name}
 
@@ -143,7 +143,7 @@ cp -pr  .bundle brokers db hooks lib app.rb config.ru Gemfile Gemfile.lock \
 
 cp -p   bin/razor-admin %{buildroot}%{_datadir}/razor-server/bin
 cp -p   bin/razor-admin-wrapper %{buildroot}%{_bindir}/razor-admin
-cp -p   config.yaml.sample %{buildroot}%{_sysconfdir}/razor
+cp -p   config.yaml.sample %{buildroot}%{_sysconfdir}/razor-server
 cp -pr  locales %{buildroot}%{_datadir}/razor-server/locales
 # Symlink the wrapper to the server bindir
 pushd %{buildroot}%{_pe_server_bindir}
@@ -238,7 +238,7 @@ rm -rf %{buildroot}
 %{_bindir}/razor-admin
 %{_pe_server_bindir}/razor-admin
 %{_agent_bindir}/razor-admin
-%dir %{_sysconfdir}/razor
+%dir %{_sysconfdir}/razor-server
 %{_sysconfdir}/razor-server/config.yaml.sample
 %attr(-,%{_service_name},%{_service_name}) %dir %{_prefix}/var/razor
 %attr(-,%{_service_name},%{_service_name}) %dir /var/log/puppetlabs/%{upstream_name}
