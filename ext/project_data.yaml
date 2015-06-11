@@ -31,30 +31,22 @@ files:
   - .bundle
   - config.ru
   - app.rb
-  - torquebox.rb
   - bin
   - brokers
   - db
   - doc
-  - ext
   - lib
-  - app.rb
-  - config.ru
   - config.yaml.sample
-  - Gemfile
-  - Gemfile.lock
   - hooks
-  - hooks.md
+  - shiro.ini
   - jars
   - LICENSE
-  - NEWS.md
+  - '*.md'
+  - build-winpe
   - Rakefile
-  - README.md
-  - shiro.ini
   - tasks
   - torquebox.rb
   - vendor
-  - .bundle
   - 'locales/*.po'
   - 'locales/*.pot'
 tar_excludes: "brokers/chef.broker"
