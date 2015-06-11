@@ -115,8 +115,8 @@ mkdir -p %{buildroot}/var/log/puppetlabs/%{upstream_name}
 %if 0%{?_with_systemd}
 install -d -m0755  %{buildroot}%{_unitdir}
 install -m0644 ext/redhat/%{name}.service %{buildroot}%{_unitdir}/
-install -d -m0755 %{buildroot}%{_datadir}/%{_name}
-install -m0644 ext/redhat/%{name}.env %{buildroot}%{_datadir}/%{_name}/
+install -d -m0755 %{buildroot}%{_datadir}/%{upstream_name}
+install -m0644 ext/redhat/%{name}.env %{buildroot}%{_datadir}/%{upstream_name}/
 install -d -m0755 %{buildroot}/var/run/puppetlabs/%{upstream_name}
 install -d %{buildroot}%{_tmpfilesdir}
 install -m0644 ext/redhat/%{name}-tmpfiles.conf %{buildroot}%{_tmpfilesdir}/%{name}.conf
@@ -245,7 +245,7 @@ rm -rf %{buildroot}
 %attr(-,%{_service_name},%{_service_name}) %{_datadir}/razor-server/config.ru
 %if 0%{?_with_systemd}
 %{_unitdir}/%{name}.service
-%{_datadir}/%{_name}/%{name}.env
+%{_datadir}/%{upstream_name}/%{name}.env
 %attr(-,%{_service_name},%{_service_name}) %dir /var/run/puppetlabs/%{upstream_name}/
 %{_tmpfilesdir}/%{name}.conf
 %else
