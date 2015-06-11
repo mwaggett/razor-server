@@ -27,6 +27,7 @@ files:
   - ext/redhat/pe-razor-server.service
   - ext/redhat/pe-razor-server.env
   - ext/redhat/pe-razor-server-tmpfiles.conf
+  - ext/redhat/pe-razor-server.sysconfig
   - 'Gemfile*'
   - .bundle
   - config.ru
