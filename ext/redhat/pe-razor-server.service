@@ -3,7 +3,7 @@ Description=Puppet Enterprise Razor Server
 After=network.target pe-postgresql.service
 
 [Service]
-EnvironmentFile=/opt/puppetlabs/server/apps/razor-server/share/pe-razor-server.env
+EnvironmentFile=/opt/puppetlabs/server/apps/razor-server/share/razor-server/pe-razor-server.env
 EnvironmentFile=/etc/sysconfig/pe-razor-server
 User=pe-razor
 ExecStart=/opt/puppetlabs/server/apps/razor-server/share/torquebox/jboss/bin/standalone.sh -Djboss.server.log.dir=$JBOSS_LOG_DIR -Dhttp.port=$HTTP_PORT -Dhttps.port=$HTTPS_PORT -b 0.0.0.0
