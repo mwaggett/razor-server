@@ -162,10 +162,18 @@ sed -i 's,#! /usr/bin/env jruby,#!%{_prefix}/bin/jruby,g' %{buildroot}%{_datadir
 %service_add_pre %{name}.service
 %endif
 if [ $1 -gt 1 ]; then
-  (
-    cd %{_datadir}/razor-server;
-    %{_prefix}/sbin/torquebox undeploy > /dev/null 2>&1 ||:
-  )
+    # Check for the pre-2015.2 location first
+    if [ -d /opt/puppet/share/razor-server ]; then
+        (
+        cd /opt/puppet/share/razor-server;
+        /opt/puppet/sbin/torquebox undeploy > /dev/null 2>&1 ||:
+        )
+    else
+        (
+        cd %{_datadir}/razor-server;
+        %{_prefix}/sbin/torquebox undeploy > /dev/null 2>&1 ||:
+        )
+    fi
 fi
 
 %post
