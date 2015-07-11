@@ -1,6 +1,26 @@
 # Razor Server Release Notes
 
-## Next.Next - TBD
+## Next - Next
+
+### Other
+
++ BUGFIX: The EL7 packages will now start the razor-server service properly.
++ BUGFIX: Tasks created through the `create-task` command will now find
+  the correct boot stage, rather than feeding the `default` stage at each boot.
++ NEW: Task added for Windows 2008 R2. Details are on the [Wiki](https://github.com/puppetlabs/razor-server/wiki/Installing-windows).
++ NEW: `reinstall-node` now accepts a `same_policy` argument, which indicates
+  that the node should skip over the microkernel and policy-binding stage,
+  and just proceed with a reinstall of the current policy.
++ NEW: The `like` tag matcher can be used to match expressions to a regular
+  expression. This can be used, for example, to match on a range of MAC
+  addresses. 
++ NEW: The `str` tag matcher can be used to convert input (likely numeric)
+  into a string.
++ IMPROVEMENT: The `bootstrap` URL will now guess what the correct http_port
+  value should be, typically falling back to the URL used for the `/bootstrap`
+  request. 
+
+## 1.0.1 - 2015-06-11
 
 ### Other
 
@@ -10,8 +30,12 @@
 + NEW: The `store_hook_input` and `store_hook_output` config settings can
   toggle storing the input and output for a hook script in the event log. These
   are disabled by default.
++ IMPROVEMENT: Determine the WinPE drive letter programmatically for Windows
+  tasks.
++ IMPROVEMENT: Show severity for an event in node log view.
++ IMPROVEMENT: Log when the `puppet-pe` broker fails execution.
 
-## Next - TBD
+## 1.0.0 - 2015-06-08
 
 ### Incompatible changes
 
@@ -39,6 +63,10 @@
   HTTP and HTTPS communication instead of `RAZOR_PORT`
 + NEW: If the razor-server is configured to use SSL, any HTTPS calls to
   /api/microkernel/bootstrap must include the `http_port` argument.
++ NEW: The `like` matcher function will allow Regex-based string evaluation
+  when matching nodes to tags.
++ NEW: The `str` matcher function will convert numbers, strings, and booleans
+  to strings.
 + BUGFIX: Any metadata that returned an array or hash caused unreliable
   behavior when referenced in tags. This will now return a helpful error.
 + IMPROVEMENT: The task link in `create-policy` is now optional, deferring to

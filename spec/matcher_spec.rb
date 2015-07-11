@@ -132,6 +132,28 @@ describe Razor::Matcher do
       match("=", "[]", "[]").should == true
     end
 
+    describe "like function" do
+      [['abc', 'abc'], ['abc', 'a.c'], ['abc', 'a.+'], ['abc', 'a.*'],
+       ['abc', 'ab'], ['abc', ''], ['abc', '\Aabc\z'], ['abc', '^abc$']].each do |str, reg|
+        it "matches with #{str.inspect} and #{reg.inspect}" do
+          match("like", str, reg).should == true
+        end
+      end
+      [['abc', 'def'], ['abc', 'z'], ['3', '#{1+2}'], ['abc', '\Abc\z'],
+       ['abc', '\zabc\A'], ['abc', '$abc^']].each do |str, reg|
+        it "fails with #{str.inspect} and #{reg.inspect}" do
+          match("like", str, reg).should == false
+        end
+      end
+      it "fails with invalid regular expression '*'" do
+        m = Matcher.new(["like", 'abc', '*'])
+        m.should_not be_valid
+        m.errors.should == [<<-EOF.strip]
+          invalid regular expression supplied to `like` for argument 1: target of repeat operator is not specified: /*/
+        EOF
+      end
+    end
+
     it "neq should behave" do
       match("!=", 1, 1).should == false
       match("!=", 1, 2).should == true
@@ -165,6 +187,28 @@ describe Razor::Matcher do
         expect {match("=", ["num", "2t"], 2)}.to raise_error RuleEvaluationError
         expect {match("=", ["num", "a2"], 2)}.to raise_error RuleEvaluationError
         expect {match("=", ["num", nil ], 0)}.to raise_error RuleEvaluationError
+      end
+    end
+
+    describe "str" do
+      it "should behave for valid integers" do
+        match("=", ["str", 9      ], "9" ).should == true
+        match("=", ["str", "10"   ], "0" ).should == false
+        match("=", ["str", "0xf"  ], "0xf").should == true
+        match("=", ["str", "0b110"], "0b110" ).should == true
+        match("=", ["str", "027"  ], "027").should == true
+      end
+
+      it "should behave for valid floats" do
+        match("=", ["str", 5.4  ], "5.4").should == true
+        match("=", ["str", "2.7"], "2.7").should == true
+        match("=", ["str", "1e5"], "1e5").should == true
+      end
+
+      it "should behave for valid booleans and nil" do
+        match("=", ["str", true ], "true").should == true
+        match("=", ["str", false], "false").should == true
+        match("=", ["str", nil], '').should == true
       end
     end
 
@@ -226,6 +270,14 @@ describe Razor::Matcher do
       Matcher.new(["=", true, false]).should be_valid
       Matcher.new(["eq", 1, ["=", 5, "ten"]]).should be_valid
       Matcher.new(["eq", 6.3, 3]).should be_valid
+    end
+
+    it "should allow strings for 'like' function" do
+      Matcher.new(["like", true, false]).should_not be_valid
+      Matcher.new(["like", 1, 2]).should_not be_valid
+      Matcher.new(["like", "abc", false]).should_not be_valid
+      Matcher.new(["like", 1, "abc"]).should_not be_valid
+      Matcher.new(["like", "abc", "def"]).should be_valid
     end
 
     it "should allow all types for '!=' function" do
@@ -300,7 +352,11 @@ describe Razor::Matcher do
     end
 
     it "should type the return of num as Numeric" do
-      Matcher.new([">", ["num", "7"], 3]). should be_valid
+      Matcher.new([">", ["num", "7"], 3]).should be_valid
+    end
+
+    it "should type the return of num as String" do
+      Matcher.new(["=", ["str", 7], "7"]).should be_valid
     end
 
     it "should validate nested functions" do

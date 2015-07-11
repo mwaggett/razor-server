@@ -1,4 +1,13 @@
-# Task notes for Windows 8 Professional
+# Task notes for Windows 2008 R2
+
+## Install Prerequisites
+
+- Machine must be running Windows 2008 R2.
+- Windows Management Framework (WMF) version 4.0 is installed.
+-- Windows Update service must be running in order to install this.
+- Windows Assessment and Deployment Kit (Windows ADK) version 8.0 or 8.1 is 
+  installed.
+- Download `build-winpe` folder from Razor server.
 
 ## Pre-install Steps
 

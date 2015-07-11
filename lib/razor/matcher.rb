@@ -16,11 +16,13 @@ require 'json'
 # The builtin operators are (see +Functions+)
 #   and, or - true if anding/oring arguments is true
 #   =, !=   - true if arg1 =/!= arg2
+#   like    - true if arg1 =~ arg2 (interpreting arg2 as Regex)
 #   in      - true if arg1 is one of arg2 .. argn
 #   fact    - retrieves the fact named arg1 from the node if it exists
 #             If not, an error is raised unless a second argument is given, in
 #             which case it is returned as the default.
 #   num     - converts arg1 to a numeric value if possible; raises if not
+#   str     - converts arg1 to a string value if possible; raises if not
 #   <, <=   - true if arg1 </<= arg2
 #   >, >=   - true if arg1 >/>= arg2
 #   lower   - string result from converting arg1 to lower case
@@ -62,9 +64,11 @@ class Razor::Matcher
         "tag"      => {:expects => [[String]],        :returns => Mixed   },
         "state"    => {:expects => [[String], [String]], :returns => Mixed   },
         "eq"       => {:expects => [Mixed],           :returns => Boolean },
+        "like"     => {:expects => [[String], [String]], :returns => Boolean },
         "neq"      => {:expects => [Mixed],           :returns => Boolean },
         "in"       => {:expects => [Mixed],           :returns => Boolean },
         "num"      => {:expects => [Mixed],           :returns => Number  },
+        "str"      => {:expects => [Mixed],           :returns => [String] },
         "gte"      => {:expects => [[Numeric]],       :returns => Boolean },
         "gt"       => {:expects => [[Numeric]],       :returns => Boolean },
         "lte"      => {:expects => [[Numeric]],       :returns => Boolean },
@@ -125,6 +129,10 @@ class Razor::Matcher
       args[0] == args[1]
     end
 
+    def like(*args)
+      !(args[0] =~ Regexp.new(args[1])).nil?
+    end
+
     def neq(*args)
       args[0] != args[1]
     end
@@ -149,6 +157,10 @@ class Razor::Matcher
       end
 
       raise RuleEvaluationError.new _("can't convert %{raw} to number") % {raw: value.inspect}
+    end
+
+    def str(*args)
+      args[0].to_s
     end
 
     def gte(*args)
@@ -304,6 +316,16 @@ class Razor::Matcher
                     "%{expected} are accepted") %
             {arg: arg.inspect, type: arg.class, name: name, position: pos, expected: expected_types}
         end
+      end
+    end
+
+    if name == 'like' and errors.empty?
+      begin
+        Regexp.new(rule[2])
+      rescue RegexpError => e
+        errors << _("invalid regular expression supplied to `like` for argument %{position}: %{message}") %
+            { position: caller_position || 1,
+              message: e.message }
       end
     end
   end
