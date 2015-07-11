@@ -96,7 +96,9 @@ module RazorExtensions
         arch = $3
 
         #hack for https://tickets.puppetlabs.com/browse/RE-1990
-        if host.is_pe?
+        # Previously this used `host.is_pe?`, but with AIO this is no longer
+        # reliable. Defaulting to `true` since these tests only happen in PE.
+        if true
           pattern = "pl-%s-%s-repos-pe-%s-%s%s-%s.repo"
         else
           pattern = "pl-%s-%s-%s-%s%s-%s.repo"
