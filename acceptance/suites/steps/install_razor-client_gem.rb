@@ -16,7 +16,9 @@ step 'Install the Razor client'
 # "undefined method `map' for Gem::Specification:Class"
 # The other potential fix is to do `gem update --system`, which is
 # a larger system change.
-on agents, 'gem install --clear-sources --source http://rubygems.delivery.puppetlabs.net pe-razor-client --no-ri'
+on agents, '/opt/puppetlabs/puppet/bin/gem install --clear-sources --source http://rubygems.delivery.puppetlabs.net pe-razor-client --no-ri'
+# Symlink razor into the path so just `razor` works.
+on agents, 'ln -s /opt/puppetlabs/puppet/bin/razor /usr/bin/razor'
 
 step 'Print Razor help, and check for JSON warning'
 agents.each do |agent|
