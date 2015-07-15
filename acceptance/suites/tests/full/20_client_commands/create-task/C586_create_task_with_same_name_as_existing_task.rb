@@ -45,6 +45,6 @@ json = {
 }
 
 razor agents, 'create-task', json, exit: 1 do |agent, output|
-  assert_match /The task new-task already exists, and the os, boot_seq fields do not match/, output
+  assert_match /The task new-task already exists, and the os fields do not match/, output
 end
 
