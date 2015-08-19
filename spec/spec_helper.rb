@@ -175,9 +175,15 @@ module Razor::Test
         params = Hash[params.map{|(k,v)| [k.to_s,v]}]
         # Do the aliasing and conforming before checking the returned params.
         modified_params = cmd.conform!(cmd.apply_aliases!(params))
+        modified_params = deep_merge(modified_params, opts[:expect]) if opts[:expect]
         last_response.command.params.should == stringify_keys(modified_params)
         last_response.command.status.should == status
       end
+    end
+
+    def deep_merge(original, new)
+      merger = proc { |key,v1,v2| Hash === v1 && Hash === v2 ? v1.merge(v2, &merger) : v2 }
+      new.merge(original, &merger)
     end
 
     def stringify_keys(hash)
