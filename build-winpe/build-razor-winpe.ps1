@@ -9,7 +9,11 @@
 #     http://razor-server:8150/svc (note the /svc at the end, not /api)
 #   - workdir: where to create the WinPE image and intermediate files
 #              Defaults to the directory containing this script
-param([String] $workdir, [Parameter(Mandatory=$true)][String] $razorurl)
+#   - driverdir: where extra drivers needed for the winpe are located
+#                Defaults to the "extra-drivers" directory in the folder
+#                containing this script
+param([String] $workdir, [Parameter(Mandatory=$true)][String] $razorurl,
+      [String] $driverdir)
 
 function test-administrator {
     $identity  = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -49,6 +53,9 @@ $cwd = get-currentdirectory
 if ($workdir -eq "") {
     $workdir = $cwd
 }
+if ($driverdir -eq "") {
+    $driverdir = (join-path $cwd "extra-drivers")
+}
 
 $output = join-path $workdir "razor-winpe"
 $mount  = join-path $workdir "razor-winpe-mount"
@@ -85,7 +92,7 @@ the default location.
 $env:PSModulePath = ($env:PSModulePath + ";$adk\..\..\Deployment Tools\amd64")
 
 # Path to the clean WinPE WIM file.
-$wim = join-path $adk "en-us\winpe.wim"
+$wim = join-path $adk "en-us\razor-winpe.wim"
 
 # Root for the CAB files for optional features.
 $packages = join-path $adk "WinPE_OCs"
@@ -137,6 +144,9 @@ foreach ($cab in $cabs ) {
     add-windowspackage -packagepath $pkg -path $mount
 }
 
+# Add extra drivers
+add-windowsdriver -Path $mount -Driver $driverdir -Recurse
+
 write-host "* Writing startup PowerShell script"
 $file   = join-path $mount "razor-client.ps1"
 $client = join-path $cwd "razor-client.ps1"
@@ -160,5 +170,7 @@ echo dropping to a command shell now...
 
 write-host "* Unmounting and saving the wim image"
 dismount-windowsimage -save -path $mount -erroraction stop
+
+remove-item -path $mount
 
 write-host "* Work is complete and the WIM should be ready to roll!"

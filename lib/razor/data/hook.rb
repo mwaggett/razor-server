@@ -107,7 +107,7 @@ class Razor::Data::Hook < Sequel::Model
     # Call the `_run` method so the queue arguments can be converted into a
     # standardized format for the actual `run` method.
     publish '_run', 'cause' => cause, 'args' => formatted_args,
-                 'queue' => '/queues/razor/sequel-hook-messages'
+                    'queue' => '/queues/razor/sequel-hooks-messages'
   end
 
   # Delegator for private method
@@ -220,9 +220,9 @@ class Razor::Data::Hook < Sequel::Model
       end
 
       appender.update(input: args.to_json) if Razor.config['store_hook_input'] or debug
-      result, output = exec_script(script, args.to_json)
-      appender.update(exit_status: result.exitstatus,
-                      severity: result.success? ? 'info' : 'error')
+      exit_status, success, output, error = exec_script(script, args.to_json)
+      appender.update(exit_status: exit_status,
+                      severity: success ? 'info' : 'error')
       # If the output is not valid JSON, put the whole message into the 'msg' in the Event
       begin
         appender.update(output: output) if Razor.config['store_hook_output'] or debug
@@ -230,7 +230,7 @@ class Razor::Data::Hook < Sequel::Model
         appender.update(msg: json['output'], error: json['error'])
         residual = json.keys - ['hook', 'node', 'output', 'error']
         unless residual == []
-          severity = appender.get(:error) == 'error' ? 'error' : 'warn'
+          severity = appender.get(:severity) == 'error' ? 'error' : 'warn'
           msg = _('unexpected key in hook\'s output: %{diff}') % {hook: self.name, diff: residual.join(', ')}
           appender.add_error(msg, severity)
         end
@@ -251,7 +251,10 @@ class Razor::Data::Hook < Sequel::Model
         # Put entire hook output into the 'msg' key as-is.
         appender.update(msg: output)
       rescue TypeError # TypeError catches a nil output.
-        # Do nothing; this is fine.
+        # Do nothing; stderr is still entered below.
+      end
+      if error
+        appender.add_error(error)
       end
       save
       appender.log
@@ -290,7 +293,7 @@ class Razor::Data::Hook < Sequel::Model
     when NilClass
      # Skip; not included in output.
     else
-      severity = appender.get(:error) == 'error' ? 'error' : 'warn'
+      severity = appender.get(:severity) == 'error' ? 'error' : 'warn'
       appender.add_error(_('hook output for hook configuration should be an %{object} but was a %{given}') %
                          {object: ruby_type_to_json(Hash), given: ruby_type_to_json(config.class)}, severity)
     end
@@ -328,7 +331,13 @@ class Razor::Data::Hook < Sequel::Model
 
   def exec_script(script, args)
     begin
-      stdin, stdout, stderr, wait_thr = Open3.popen3(script.to_s)
+      # Run the file from the hook's directory so that relative paths work.
+      hook_dir = File.expand_path('..', script)
+      stdin, stdout, stderr, wait_thr = Bundler.with_clean_env do
+        extra_path = Razor.config['hook_execution_path']
+        ENV['PATH'] = "#{extra_path}:#{ENV['PATH']}" if extra_path
+        Open3.popen3(script.to_s, :chdir => hook_dir)
+      end
       stdin.write(args) if args
       begin
         stdin.close unless stdin.closed?
@@ -339,11 +348,17 @@ class Razor::Data::Hook < Sequel::Model
       wait_thr.join
       # Prefer nil over an empty string.
       output = stdout.readlines.join
-      [wait_thr.value, output.empty? ? nil : output]
+      error = stderr.readlines.join
+      process = wait_thr.value
+      [process.exitstatus, process.success?, output.empty? ? nil : output,
+       error.empty? ? nil : error]
+    rescue IOError => e
+      # Error running the script. Catch the message and continue.
+      [1, false, nil, e.message]
     ensure
-      stdin.close unless stdin.closed?
-      stdout.close unless stdout.closed?
-      stderr.close unless stderr.closed?
+      stdin.close unless !stdin or stdin.closed?
+      stdout.close unless !stdout or stdout.closed?
+      stderr.close unless !stderr or stderr.closed?
     end
   end
 

@@ -1,9 +1,9 @@
 # -*- encoding: utf-8 -*-
 
-class Razor::Command::UpdateHookConfiguration < Razor::Command
-  summary "Update one key in a hook's configuration"
+class Razor::Command::UpdateBrokerConfiguration < Razor::Command
+  summary "Update one key in a broker's configuration"
   description <<-EOT
-This allows for updating, adding, and removing a single key of a hook's
+This allows for updating, adding, and removing a single key of a broker's
 configuration.
   EOT
 
@@ -16,14 +16,14 @@ Set a single key from a node:
   example cli: <<-EOT
 Set a single key from a node:
 
-    razor update-hook-configuration --node node1 \\
+    razor update-broker-configuration --node node1 \\
         --key my_key --value twelve
   EOT
 
-  authz '%{hook}'
+  authz '%{broker}'
 
-  attr 'hook', type: String, required: true, references: [Razor::Data::Hook, :name],
-               help: _('The hook for which to update configuration.')
+  attr 'broker', type: String, required: true, references: [Razor::Data::Broker, :name],
+               help: _('The broker for which to update configuration.')
 
   attr 'key', required: true, type: String, size: 1..Float::INFINITY,
               help: _('The key to change in the configuration.')
@@ -40,16 +40,16 @@ EOT
 
   # Update/add specific configuration key
   def run(request, data)
-    hook = Razor::Data::Hook[:name => data['hook']]
-    config = hook.configuration
+    broker = Razor::Data::Broker[:name => data['broker']]
+    config = broker.configuration
     result = if data['value']
                config[data['key']] = data['value']
                _("value for key %{name} updated") %
                    {name: data['key']}
              elsif data['clear'] and config.has_key?(data['key'])
                config.delete(data['key'])
-               attr_schema = hook.hook_type.configuration_schema[data['key']]
-               if attr_schema and attr_schema['default']
+               attr_schema = broker.broker_type.configuration_schema[data['key']]
+               if attr_schema['default']
                  # The actual setting happens as part of the validation.
                  _("value for key %{name} reset to default") %
                      {name: data['key']}
@@ -61,9 +61,9 @@ EOT
                _("no changes; key %{name} already absent") %
                      {name: data['key']}
              end
-    hook.configuration = config
+    broker.configuration = config
     begin
-      hook.save
+      broker.save
       { :result => result }
     rescue Sequel::ValidationFailed => _
       request.error 422, :error => _("cannot clear required configuration key #{data['key']}")

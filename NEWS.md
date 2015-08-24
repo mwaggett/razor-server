@@ -12,7 +12,18 @@
 + BUGFIX: The EL7 packages will now start the razor-server service properly.
 + BUGFIX: Tasks created through the `create-task` command will now find
   the correct boot stage, rather than feeding the `default` stage at each boot.
++ BUGFIX: Old hook configuration can now be removed if the hook's
+  configuration.yaml is modified to remove an attribute.
++ BUGFIX: Actually use separate message queue for hook execution. This
+  previously used the same queue as the database messages.
++ BUGFIX: The unused `windows_download_url` property of the `puppet-pe` broker
+  has been removed in favor of `windows_agent_download_url`, an optional URL
+  indicating where to download the Windows PE agent. 
++ NEW: Added stock hook for dynamic assignment of hostnames. More details on
+  this new hook can be found in the hostname.hook directory's README.md.
 + NEW: Task added for Windows 2008 R2. Details are on the [Wiki](https://github.com/puppetlabs/razor-server/wiki/Installing-windows).
++ NEW: `hook_execution_path` config.yaml property is a path which will be
+  prepended to the default execution path when running hooks.
 + NEW: `reinstall-node` now accepts a `same_policy` argument, which indicates
   that the node should skip over the microkernel and policy-binding stage,
   and just proceed with a reinstall of the current policy.
@@ -21,6 +32,26 @@
   addresses. 
 + NEW: The `str` tag matcher can be used to convert input (likely numeric)
   into a string.
++ NEW: The `update-broker-configuration` command can be used to update the
+  configuration of a broker.
++ IMPROVEMENT: Stock tasks have been updated to prefer node metadata for both
+  `root_password` and `hostname`. These will fall back to the default on the
+  policy if the node metadata does not exist.
++ IMPROVEMENT: The Windows stock tasks will prefer node metadata for timezone,
+  falling back to Pacific Standard Time.
++ IMPROVEMENT: More verbose and clear log messages will be included for hook
+  execution. As part of this, STDERR will be reported as part of the log.
++ IMPROVEMENT: Broker configuration now, like hook configuration, allows the
+  usage of the `default` keyword, indicating the starting value for a
+  configuration property if not overridden upon creation.
++ IMPROVEMENT: The Windows build-winpe step now allows the addition of extra
+  drivers to the generated .wim file. The drivers (.inf extension) need to be
+  added to the `extra-drivers` folder inside the build-winpe directory.
++ IMPROVEMENT: For clarity, the build-winpe step will generate `razor-winpe.wim`
+  rather than `winpe.wim`. This way, the file can be copied to the razor-server
+  without requiring renaming.
++ IMPROVEMENT: Line endings for SetupComplete.cmd.erb are now in Windows format,
+  causing the rendered SetupComplete.cmd file to be legible on Windows systems.
 + IMPROVEMENT: The RAZOR_HTTP_PORT environment variable will now be used to
   tell the razor service which port to use for HTTP traffic.
 + IMPROVEMENT: The `bootstrap` URL will now guess what the correct http_port
