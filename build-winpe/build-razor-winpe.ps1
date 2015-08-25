@@ -115,9 +115,9 @@ if (-not(test-path -path $mount)) {
 
 
 write-host "* Copy the clean ADK WinPE image into our output area."
-copy-item $wim $output
+copy-item $wim (join-path $output "razor-winpe.wim")
 # update our wim location...
-$wim = join-path $output "razor-winpe.wim"
+$wim = (join-path $output "razor-winpe.wim")
 
 
 
@@ -146,6 +146,7 @@ foreach ($cab in $cabs ) {
 }
 
 # Add extra drivers
+write-host "* Installing extra drivers (if any) in $driverdir"
 add-windowsdriver -Path $mount -Driver $driverdir -Recurse
 
 write-host "* Writing startup PowerShell script"
