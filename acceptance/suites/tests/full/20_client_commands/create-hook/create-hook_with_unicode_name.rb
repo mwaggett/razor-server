@@ -28,7 +28,7 @@ EOF
 
 teardown do
   agents.each do |agent|
-    on(agent, "razor delete-hook --name #{hook_name}")
+    on(agent, "razor delete-hook --name '#{hook_name}'")
   end
 end
 
