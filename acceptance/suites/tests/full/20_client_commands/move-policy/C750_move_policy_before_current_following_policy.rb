@@ -12,13 +12,13 @@ create_policy agents, policy_name: 'after-policy', just_policy: true
 
 agents.each do |agent|
   step "Verify that 'before-policy' is originally defined before 'after-policy' on #{agent}"
-  text = on(agent, "razor policies").output
+  text = on(agent, "razor policies --full").output
   assert_match /before-policy.+after-policy/m, text
 end
 
 razor agents, 'move-policy --name before-policy --before after-policy' do |agent, output|
   refute_match /[Ee]rror/, output
   step "Verify that 'before-policy' is still defined after 'after-policy' on #{agent}"
-  text = on(agent, "razor policies").output
+  text = on(agent, "razor policies --full").output
   assert_match /before-policy.+after-policy/m, text
 end

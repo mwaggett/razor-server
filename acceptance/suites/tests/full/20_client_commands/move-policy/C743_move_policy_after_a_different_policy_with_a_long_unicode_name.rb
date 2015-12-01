@@ -14,7 +14,7 @@ second_name = second_result[:policy][:name]
 
 agents.each do |agent|
   step "Verify that #{first_name} is originally defined before #{second_name} on #{agent}"
-  text = on(agent, "razor policies").output
+  text = on(agent, "razor policies --full").output
   assert_match /#{Regexp.escape(first_name)}.+#{Regexp.escape(second_name)}/m, text
 end
 
@@ -24,6 +24,6 @@ json = {
 }
 razor agents, 'move-policy', json do |agent|
   step "Verify that '#{first_name}' is now defined after '#{second_name}' on #{agent}"
-  text = on(agent, "razor policies").output
+  text = on(agent, "razor policies --full").output
   assert_match /#{Regexp.escape(second_name)}.+#{Regexp.escape(first_name)}/m, text
 end
