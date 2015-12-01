@@ -13,7 +13,7 @@ tag_name = results[:tag_name]
 
 agents.each do |agent|
   step "Verify that the policy is defined on #{agent}"
-  text = on(agent, "razor policies").output
+  text = on(agent, "razor policies --full").output
   assert_match /#{tag_name}/, text
 end
 
@@ -23,6 +23,6 @@ json = {
 }
 razor agents, 'remove-policy-tag', json do |agent|
   step "Verify that tag #{tag_name} is no longer defined on policy #{policy_name} on #{agent}"
-  text = on(agent, "razor policies '#{policy_name}'").output
+  text = on(agent, "razor policies '#{policy_name}' --full").output
   refute_match /#{tag_name}/, text
 end
