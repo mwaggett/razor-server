@@ -1,6 +1,6 @@
 # Razor Server Release Notes
 
-## Next - Next
+## 1.1.0 - 2015-11-04
 
 ### Incompatible changes
 
@@ -34,6 +34,8 @@
   into a string.
 + NEW: The `update-broker-configuration` command can be used to update the
   configuration of a broker.
++ IMPROVEMENT: The `puppet` broker has been updated to use URLs to find RPM/DEB
+  files for supported OS's.
 + IMPROVEMENT: Stock tasks have been updated to prefer node metadata for both
   `root_password` and `hostname`. These will fall back to the default on the
   policy if the node metadata does not exist.
