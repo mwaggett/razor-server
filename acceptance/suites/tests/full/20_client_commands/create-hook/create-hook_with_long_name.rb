@@ -39,7 +39,7 @@ agents.each do |agent|
     create_remote_file(agent,"#{hook_path}/configuration.yaml", configuration_file)
     on(agent, "chmod +r #{hook_path}/configuration.yaml")
     on(agent, "razor create-hook --name #{hook_name}" \
-              " --hook-type #{hook_type} --c value=5 --c foo=newFoo --c bar=newBar")
+              " --hook-type #{hook_type} -c value=5 -c foo=newFoo -c bar=newBar")
 
     step 'Verify if the hook is successfully created:'
     on(agent, "razor -u https://razor-razor@#{agent}:8151/api hooks") do |result|

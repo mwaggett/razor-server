@@ -76,7 +76,7 @@ agents.each do |agent|
 
     step "Create a hook with original configuration.yaml file:"
     on(agent, "razor create-hook --name #{hook_name1}" \
-              " --hook-type #{hook_type} --c value=5 --c foo=newFoo --c bar=newBar")
+              " --hook-type #{hook_type} -c value=5 -c foo=newFoo -c bar=newBar")
 
     step 'Verify if the hook is successfully created:'
     on(agent, "razor -u https://razor-razor@#{agent}:8151/api hooks") do |result|

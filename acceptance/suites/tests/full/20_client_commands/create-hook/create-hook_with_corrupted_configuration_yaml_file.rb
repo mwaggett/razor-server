@@ -28,7 +28,7 @@ agents.each do |agent|
     create_remote_file(agent,"#{hook_path}/configuration.yaml", configuration_file)
     on(agent, "chmod +r #{hook_path}/configuration.yaml")
     on(agent, "razor create-hook --name #{hook_name}" \
-            " --hook-type #{hook_type} --c value=5 --c foo=newFoo --c bar=newBar", \
+            " --hook-type #{hook_type} -c value=5 -c foo=newFoo -c bar=newBar", \
             :acceptable_exit_codes => [1]) do |result|
       assert_match(/500 Internal Server Error/, result.stdout, 'Create hook test failed')
     end

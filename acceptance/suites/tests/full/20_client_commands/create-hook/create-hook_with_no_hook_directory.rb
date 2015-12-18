@@ -15,7 +15,7 @@ step "Create hook type"
 agents.each do |agent|
   with_backup_of(agent, hook_dir) do
     on(agent, "razor create-hook --name #{hook_name}" \
-              " --hook-type #{hook_type} --c value=5 --c foo=newFoo --c bar=newBar", \
+              " --hook-type #{hook_type} -c value=5 -c foo=newFoo -c bar=newBar", \
               :acceptable_exit_codes => [1]) do |result|
       assert_match %r(error: hook_type must be the name of an existing hook type, but is \'#{hook_type}\'), result.stdout
     end
