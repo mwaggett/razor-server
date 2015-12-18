@@ -73,7 +73,7 @@ end
 #
 # A block provided to this method will be executed inside the create-policy call, with
 # `agent` and `output` as optional parameters to the block.
-def create_policy(agents, args = {}, &block)
+def create_policy(agents, args = {}, positional = false, &block)
   def has_key_or_default(args, key, default)
     args.has_key?(key) ? args[key] : default
   end
@@ -116,22 +116,38 @@ def create_policy(agents, args = {}, &block)
   # Workaround; max-count cannot be nil
   json.delete('max-count') if max_count.nil?
 
-  {policy: {:name => policy_name, :max_count => max_count}, repo_name: repo_name,
-      broker: {:broker_name => broker_name, :broker_type => broker_type},
-      tag_name: tag_name, task_name: task_name}.tap do |return_hash|
-    razor agents, 'create-policy', json do |agent, output|
-      step "Verify that the policy is defined on #{agent}"
-      text = on(agent, "razor -u https://#{agent}:8151/api policies '#{policy_name}'").output
-      assert_match /#{Regexp.escape(policy_name)}/, text
-      block and case block.arity
-        when 0 then yield
-        when 1 then yield agent
-        when 2 then yield agent, output
-        when 3 then yield agent, output, return_hash
-        else raise "unexpected arity #{block.arity} for create_policy!"
+
+  if positional
+      razor agents, "create-policy #{policy_name} --repo #{repo_name} --task #{task_name} --broker #{broker_name} --hostname host${id}.example.com --root-password secret --max-count #{max_count} --tags #{tag_name.nil? ? [] : [tag_name]}" do |agent, output|
+        step "Verify that the policy is defined on #{agent}"
+        text = on(agent, "razor -u https://#{agent}:8151/api policies '#{policy_name}'").output
+        assert_match /#{Regexp.escape(policy_name)}/, text
+        block and case block.arity
+                    when 0 then yield
+                    when 1 then yield agent
+                    when 2 then yield agent, output
+                    else raise "unexpected arity #{block.arity} for create_policy!"
+                  end
+      end
+  else
+    {policy: {:name => policy_name, :max_count => max_count}, repo_name: repo_name,
+     broker: {:broker_name => broker_name, :broker_type => broker_type},
+     tag_name: tag_name, task_name: task_name}.tap do |return_hash|
+      razor agents, 'create-policy', json do |agent, output|
+        step "Verify that the policy is defined on #{agent}"
+        text = on(agent, "razor -u https://#{agent}:8151/api policies '#{policy_name}'").output
+        assert_match /#{Regexp.escape(policy_name)}/, text
+        block and case block.arity
+                    when 0 then yield
+                    when 1 then yield agent
+                    when 2 then yield agent, output
+                    when 3 then yield agent, output, return_hash
+                    else raise "unexpected arity #{block.arity} for create_policy!"
+                  end
       end
     end
   end
+
 end
 
 # This excludes, by default:

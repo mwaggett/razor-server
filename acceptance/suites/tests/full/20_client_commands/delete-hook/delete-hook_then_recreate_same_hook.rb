@@ -1,6 +1,6 @@
 # -*- encoding: utf-8 -*-
 # this is required because of the use of eval interacting badly with require_relative
-#require 'razor_helper'
+require 'razor/acceptance/utils'
 require 'yaml'
 confine :except, :roles => %w{master dashboard database frictionless}
 
@@ -39,7 +39,7 @@ agents.each do |agent|
     create_remote_file(agent,"#{hook_path}/configuration.yaml", configuration_file)
     on(agent, "chmod +r #{hook_path}/configuration.yaml")
     on(agent, "razor create-hook --name #{hook_name}" \
-              " --hook-type #{hook_type} --c value=5 --c foo=newFoo --c bar=newBar")
+              " --hook-type #{hook_type} -c value=5 -c foo=newFoo -c bar=newBar")
 
     step 'Verify if the hook is successfully created:'
     on(agent, "razor hooks") do |result|
@@ -57,10 +57,10 @@ agents.each do |agent|
 
     step "Create a new hook with same name as the newly deleted hook:  '#{hook_name}'"
     on(agent, "razor create-hook --name #{hook_name}" \
-              " --hook-type #{hook_type} --c value=5 --c foo=newFoo --c bar=newBar")
+              " --hook-type #{hook_type} -c value=5 -c foo=newFoo -c bar=newBar")
 
     step "Create a new hook with same name as existing hook #{hook_name}"
     on(agent, "razor create-hook --name #{hook_name}" \
-              " --hook-type #{hook_type} --c value=5 --c foo=newFoo --c bar=newBar")
+              " --hook-type #{hook_type} -c value=5 -c foo=newFoo -c bar=newBar")
   end
 end
