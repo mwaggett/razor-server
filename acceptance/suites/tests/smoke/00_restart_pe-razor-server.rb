@@ -1,4 +1,5 @@
 # -*- encoding: utf-8 -*-
+require 'razor/acceptance/utils'
 confine :except, :roles => %w{master dashboard database frictionless}
 
 test_name 'Restart Razor Service'

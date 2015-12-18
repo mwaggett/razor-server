@@ -4,7 +4,7 @@ require 'razor/acceptance/utils'
 require 'yaml'
 confine :except, :roles => %w{master dashboard database frictionless}
 
-test_name 'QA-1821 - C59734 - delete hook then recreate same hook'
+test_name 'C96242 - delete hook with positional arguments'
 step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/59734'
 
 hook_dir      = '/opt/puppetlabs/server/apps/razor-server/share/razor-server/hooks'
@@ -47,7 +47,7 @@ agents.each do |agent|
     end
 
     step 'Delete the newly created hook'
-    on(agent, "razor delete-hook --name #{hook_name}") do |result|
+    on(agent, "razor delete-hook #{hook_name}") do |result|
       assert_match(/result: hook #{hook_name} destroyed/, result.stdout, 'test failed')
     end
 
@@ -55,12 +55,5 @@ agents.each do |agent|
     text = on(agent, "razor hooks").output
     refute_match /#{hook_name}/, text
 
-    step "Create a new hook with same name as the newly deleted hook:  '#{hook_name}'"
-    on(agent, "razor create-hook --name #{hook_name}" \
-              " --hook-type #{hook_type} --c value=5 --c foo=newFoo --c bar=newBar")
-
-    step "Create a new hook with same name as existing hook #{hook_name}"
-    on(agent, "razor create-hook --name #{hook_name}" \
-              " --hook-type #{hook_type} --c value=5 --c foo=newFoo --c bar=newBar")
   end
 end
