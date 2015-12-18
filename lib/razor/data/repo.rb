@@ -34,6 +34,13 @@ module Razor::Data
       end
     end
 
+    def remove_directory(dir)
+      if Dir.exist?(dir)
+        FileUtils.chmod_R('+w', dir, force: true)
+        FileUtils.remove_entry_secure(dir)
+      end
+    end
+
     # When we are destroyed, if we have a scratch directory, we need to
     # remove it.
     def after_destroy
@@ -45,8 +52,10 @@ module Razor::Data
       self.tmpdir and FileUtils.remove_entry_secure(self.tmpdir, true)
 
       # Remove repo directory.
-      if Dir.exist?(iso_location)
-        FileUtils.remove_entry_secure(iso_location, true)
+      if self.iso_url
+        # Some files in archives are write-only. Change this property so the
+        # delete succeeds.
+        remove_directory(iso_location)
       end
     end
 
@@ -175,6 +184,7 @@ module Razor::Data
     # done, notify ourselves of that so any cleanup required can be performed.
     def unpack_repo(command, path)
       destination = iso_location
+      remove_directory(iso_location)
       destination.mkpath        # in case it didn't already exist
       Archive.extract(path, destination) if path
       self.publish('release_temporary_repo', command)
