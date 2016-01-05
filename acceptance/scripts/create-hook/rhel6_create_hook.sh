@@ -16,7 +16,7 @@ export GENCONFIG_LAYOUT="redhat6-64mdca-64a"
 export GEM_SOURCE=http://rubygems.delivery.puppetlabs.net
 bundle install --path vendor/bundle
 
-bundle exec genconfig2 $GENCONFIG_LAYOUT > $BEAKER_CONFIG
+bundle exec beaker-hostgenerator $GENCONFIG_LAYOUT > $BEAKER_CONFIG
 
 bundle exec beaker \
   --config $BEAKER_CONFIG \
