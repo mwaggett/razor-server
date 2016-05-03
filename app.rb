@@ -82,13 +82,21 @@ and requires full control over the database (eg: add and remove tables):
       org.apache.shiro.SecurityUtils.subject
     end
 
+    # Check if request is from localhost and if bypass for localhost is enabled
+    def local_request?
+      request.ip == '127.0.0.1' and Razor.config['auth.allow_localhost']
+    end
+
     # Assert that the current user has (all of) the specified permissions, and
     # raise an exception if they do not.  We handle that exception generically
     # at the top level.
     #
     # If security is disabled then this simply succeeds.
+    #
+    # If auth.allow_localhost is set, requests from a local razor client are allowed without
+    # authentication.
     def check_permissions!(*which)
-      Razor.config['auth.enabled'] and user.check_permissions(*which)
+      Razor.config['auth.enabled'] and not local_request? and user.check_permissions(*which)
       true
     end
 
@@ -560,7 +568,7 @@ and requires full control over the database (eg: add and remove tables):
   # hand-coded list, but ... it will do, for now.
   COLLECTIONS = [:brokers, :repos, :tags, :policies,
                  [:nodes, {'start' => {"type" => "number"}, 'limit' => {"type" => "number"}}], :tasks, :commands,
-                 [:events, {'start' => {"type" => "number"}, 'limit' => {"type" => "number"}}], :hooks]
+                 [:events, {'start' => {"type" => "number"}, 'limit' => {"type" => "number"}}], :hooks, :config]
 
   #
   # The main entry point for the public/management API
@@ -770,6 +778,22 @@ and requires full control over the database (eg: add and remove tables):
     {
       "spec" => spec_url("collections", "nodes", "log"),
       "items" => node.log(limit: params[:limit], start: params[:start])
+    }.to_json
+  end
+
+  get '/api/collections/config' do
+    blacklist = Razor.config['api_config_blacklist'] || []
+    items = Razor.config.flat_values.reject do |k, _|
+      blacklist.include? k
+    end
+    {
+        "spec" => spec_url("collections", "config"),
+        "items" => items.map do |k,v|
+          {
+            "name" => k,
+            "value" => v
+          }
+        end,
     }.to_json
   end
 
