@@ -7,7 +7,7 @@ confine :except, :roles => %w{master dashboard database frictionless}
 test_name 'Configure Razor server for basic authentication'
 step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/259'
 
-config_yaml = '/etc/puppetlabs/razor-server/config.yaml'
+config_yaml = '/etc/puppetlabs/razor-server/config-defaults.yaml'
 shiro_ini = '/etc/puppetlabs/razor-server/shiro.ini'
 
 agents.each do |agent|
@@ -19,7 +19,7 @@ agents.each do |agent|
       yaml['all']['auth']['enabled'] = true
       config = YAML.dump(yaml)
       File.open(File::join(config_tmpdir, 'new-config.yaml'), 'w') {|f| f.write(config) }
-      step "Copy modified config.yaml to #{agent}"
+      step "Copy modified config-defaults.yaml to #{agent}"
       scp_to agent, File::join(config_tmpdir, 'new-config.yaml'), config_yaml
       on agent, "chmod +r #{config_yaml}"
 

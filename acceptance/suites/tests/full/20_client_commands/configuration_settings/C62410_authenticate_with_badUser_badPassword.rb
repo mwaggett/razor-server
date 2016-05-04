@@ -7,7 +7,7 @@ confine :except, :roles => %w{master dashboard database frictionless}
 test_name 'Enable auth and authenticate with bad user and bad password'
 step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/62410'
 
-config_yaml       = '/etc/puppetlabs/razor-server/config.yaml'
+config_yaml       = '/etc/puppetlabs/razor-server/config-defaults.yaml'
 
 teardown do
   agents.each do |agent|

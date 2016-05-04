@@ -7,7 +7,7 @@ confine :except, :roles => %w{master dashboard database frictionless}
 test_name 'C61687: Enable auth and authenticate with wrong format of credentials'
 step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/61687'
 
-config_yaml       = '/etc/puppetlabs/razor-server/config.yaml'
+config_yaml       = '/etc/puppetlabs/razor-server/config-defaults.yaml'
 
 teardown do
   agents.each do |agent|

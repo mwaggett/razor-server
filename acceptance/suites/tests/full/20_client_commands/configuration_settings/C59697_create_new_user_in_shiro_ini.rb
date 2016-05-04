@@ -7,7 +7,7 @@ confine :except, :roles => %w{master dashboard database frictionless}
 test_name 'Create new user in shiro.ini'
 step 'https://testrail.ops.puppetlabs.net/index.php?/cases/view/59697'
 
-config_yaml       = '/etc/puppetlabs/razor-server/config.yaml'
+config_yaml       = '/etc/puppetlabs/razor-server/config-defaults.yaml'
 shiro_ini         = '/etc/puppetlabs/razor-server/shiro.ini'
 
 teardown do
