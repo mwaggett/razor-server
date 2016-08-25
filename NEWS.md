@@ -1,15 +1,25 @@
 # Razor Server Release Notes
 
-## 1.4.0 - 2016-06-30
+## ? - ?
+
+### API changes
+
++ IMPROVEMENT: Added `update-policy-repo` command to facilitate changing
+  the repo associated with a policy without needing to manually update
+  the repo's contents or delete the policy.
+
+## 1.4.0 - 2016-07-06
 
 ### API changes
 
 + IMPROVEMENT: Pathing is now consistent with the All-In-One (AIO) agent format.
-  This means that some pathing changes are necessary:
+  Packaging will move these files automatically. These are the included pathing
+  changes:
   - `/etc/razor/config.yaml` to `/etc/puppetlabs/razor-server/config.yaml`
   - `/etc/razor/shiro.ini` to `/etc/puppetlabs/razor-server/shiro.ini`
-  - `/var/log/razor-server/server.log` to `/var/log/razor-server/server.log`
-  Packaging will move these files automatically.
+  - `/var/log/razor-server/server.log` to `/var/log/puppetlabs/razor-server/server.log`
+  - `hooks`, `brokers`, and `tasks` from `/opt/razor` are now in 
+    `/opt/puppetlabs/server/apps/razor-server/share/razor-server`
 + IMPROVEMENT: Updating Torquebox to 3.1.2 and JRuby to 1.7.19.
 
 ## 1.3.0 - 2016-05-19
