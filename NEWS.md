@@ -7,6 +7,14 @@
 + IMPROVEMENT: Added `update-policy-repo` command to facilitate changing
   the repo associated with a policy without needing to manually update
   the repo's contents or delete the policy.
++ IMPROVEMENT: Added `update-policy-broker` command to facilitate
+  migrating the broker that a policy uses.
+
+### Other
+
++ IMPROVEMENT: The `puppet` and `puppet-pe` brokers will now attempt to
+  run `ntpdate` against `pool.ntp.org` before registering. The server
+  can be overridden using the new `ntpdate_server` config parameters.
 
 ## 1.4.0 - 2016-07-06
 
