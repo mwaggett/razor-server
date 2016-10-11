@@ -20,7 +20,7 @@ razor agents, 'register-node --installed true --hw-info net0=abcdef' do |agent, 
     assert_match /metadata:\s+\n\s+key:\s+value/, text
   end
 
-  razor agent, 'update-node-metadata --node ' + name + ' --key key --value new-value --no-replace', exit: 1 do |agent, text|
+  razor agent, 'update-node-metadata --node ' + name + ' --key key --value new-value --no-replace', nil, exit: 1 do |agent, text|
     step "Verify that an error is thrown on #{agent}"
     assert_match /409 Conflict/, text
     text = on(agent, "razor nodes #{name}").output
