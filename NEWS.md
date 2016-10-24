@@ -1,9 +1,11 @@
 # Razor Server Release Notes
 
-## ? - ?
+## 1.5.0 - 2016-10-20
 
 ### API changes
 
++ BUGFIX: The `set-node-hw-info` command now works if the 
+  `match_nodes_on` Razor config includes `mac` (default).`
 + BUGFIX: The `update-node-metadata` and `modify-node-metadata` commands
   now throw the intended errors if `no_replace` is supplied and the key
   exists. For the latter command, you may supply the new argument
@@ -17,6 +19,12 @@
   the repo's contents or delete the policy.
 + NEW: Added `update-policy-broker` command to facilitate
   migrating the broker that a policy uses.
++ IMPROVEMENT: The `set-node-hw-info` command can now accept `mac` as an
+  argument.
+  
+### Task changes
+
++ NEW: Added Fedora 23 task.
 
 ### Broker changes
 
@@ -27,14 +35,19 @@
 
 ### Other
 
++ IMPROVEMENT: Nodes will now store all `hw_info`, not just the values
+  used for matching to nodes in the database.
 + BUGFIX: The `puppet-pe` broker for Windows now works properly for
   non-English 64-bit Windows ISO files.
 + BUGFIX: The windows tasks now utilize an optional `win_language`
   configuration in a node's metadata which allows users to install ISOs
   in languages other than English.
++ BUGFIX: Fixed the deletion of repos when the Razor server is running
+  on Ubuntu.
++ IMPROVEMENT: The microkernel now works with non-string `is_virtual`
+  fact.
 + IMPROVEMENT: The `puppet` and `puppet-pe` brokers will now attempt to
-  run `ntpdate` against `pool.ntp.org` before registering. The server
-  can be overridden using the new `ntpdate_server` config parameters.
+  run `ntpdate` if the `ntpdate_server` config is set.
 
 ## 1.4.0 - 2016-07-06
 
