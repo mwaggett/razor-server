@@ -18,6 +18,7 @@ group :ci, :system_tests do
     gem 'beaker', '~> 2.5'
   end
   gem "beaker-hostgenerator", *location_for(ENV['BEAKER_HOSTGENERATOR_VERSION'] || "~> 0.2")
+  gem 'public_suffix', '1.4.6'
 end
 
 if File.exists? "#{__FILE__}.local"
