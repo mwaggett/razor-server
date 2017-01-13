@@ -6,10 +6,10 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: Razor Server 1.5.0-6-g7a344dc\n"
+"Project-Id-Version: Razor Server 1.5.0.358-22-g1651a38\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-01-13 17:28-0600\n"
-"PO-Revision-Date: 2017-01-13 17:28-0600\n"
+"POT-Creation-Date: 2017-01-13 17:33-0600\n"
+"PO-Revision-Date: 2017-01-13 17:33-0600\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: \n"
@@ -772,22 +772,26 @@ msgid ""
 msgstr ""
 
 #: ../lib/razor/command/update_broker_configuration.rb:51 ../lib/razor/command/update_hook_configuration.rb:51
+msgid "                   \"configuration key #{data['key']} is not in the schema \"and must be cleared"
+msgstr ""
+
+#: ../lib/razor/command/update_broker_configuration.rb:55 ../lib/razor/command/update_hook_configuration.rb:55
 msgid "value for key %{name} updated"
 msgstr ""
 
-#: ../lib/razor/command/update_broker_configuration.rb:58 ../lib/razor/command/update_hook_configuration.rb:58
+#: ../lib/razor/command/update_broker_configuration.rb:61 ../lib/razor/command/update_hook_configuration.rb:61
 msgid "value for key %{name} reset to default"
 msgstr ""
 
-#: ../lib/razor/command/update_broker_configuration.rb:61 ../lib/razor/command/update_hook_configuration.rb:61
+#: ../lib/razor/command/update_broker_configuration.rb:64 ../lib/razor/command/update_hook_configuration.rb:64
 msgid "key %{name} removed from configuration"
 msgstr ""
 
-#: ../lib/razor/command/update_broker_configuration.rb:65 ../lib/razor/command/update_hook_configuration.rb:65
+#: ../lib/razor/command/update_broker_configuration.rb:68 ../lib/razor/command/update_hook_configuration.rb:68
 msgid "no changes; key %{name} already absent"
 msgstr ""
 
-#: ../lib/razor/command/update_broker_configuration.rb:73 ../lib/razor/command/update_hook_configuration.rb:73
+#: ../lib/razor/command/update_broker_configuration.rb:76 ../lib/razor/command/update_hook_configuration.rb:76
 msgid "\"cannot clear required configuration key #{data['key']}\""
 msgstr ""
 
