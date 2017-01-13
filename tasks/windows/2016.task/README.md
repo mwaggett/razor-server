@@ -1,8 +1,8 @@
-# Task notes for Windows 2012 R2
+# Task notes for Windows 2016 Server
 
 ## Install Prerequisites
 
-- Machine must be running Windows Server 2012R2.
+- Machine must be running Windows Server 2016.
 - Windows Assessment and Deployment Kit (Windows ADK) version 8.0 or 8.1 is
   installed.
 
