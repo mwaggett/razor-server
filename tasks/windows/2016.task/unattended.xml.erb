@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
-  <servicing></servicing>
   <settings pass="windowsPE">
     <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
       <DiskConfiguration>
@@ -8,24 +7,33 @@
           <CreatePartitions>
             <CreatePartition wcm:action="add">
               <Order>1</Order>
+              <Size>350</Size>
               <Type>Primary</Type>
+            </CreatePartition>
+            <CreatePartition wcm:action="add">
               <Extend>true</Extend>
+              <Order>2</Order>
+              <Type>Primary</Type>
             </CreatePartition>
           </CreatePartitions>
           <ModifyPartitions>
             <ModifyPartition wcm:action="add">
-              <Extend>false</Extend>
+              <Active>true</Active>
               <Format>NTFS</Format>
-              <Letter>C</Letter>
+              <Label>Boot</Label>
               <Order>1</Order>
               <PartitionID>1</PartitionID>
-              <Label>Windows 8</Label>
+            </ModifyPartition>
+            <ModifyPartition wcm:action="add">
+              <Order>2</Order>
+              <PartitionID>2</PartitionID>
+              <Format>NTFS</Format>
+              <Label>System</Label>
             </ModifyPartition>
           </ModifyPartitions>
           <DiskID>0</DiskID>
           <WillWipeDisk>true</WillWipeDisk>
         </Disk>
-        <WillShowUI>OnError</WillShowUI>
       </DiskConfiguration>
       <UserData>
         <AcceptEula>true</AcceptEula>
@@ -33,15 +41,23 @@
           <!-- Evaluation key from
                http://technet.microsoft.com/en-us/library/jj612867.aspx
                Fill in your own for real deployments -->
-          <Key><%= node.metadata['productkey'] || 'V7C3N-3W6CM-PDKR2-KW8DQ-RJMRD' %></Key>
+          <WillShowUI>OnError</WillShowUI>
+          <Key><%= node.metadata['productkey'] || 'WC2BQ-8NRM3-FDDYY-2BFGV-KHKQY' %></Key>
         </ProductKey>
       </UserData>
       <ImageInstall>
         <OSImage>
+          <InstallFrom>
+            <MetaData wcm:action="add">
+              <Key>/IMAGE/NAME</Key>
+              <Value>Windows Server 2016 SERVERSTANDARD</Value>
+            </MetaData>
+          </InstallFrom>
           <InstallTo>
             <DiskID>0</DiskID>
-            <PartitionID>1</PartitionID>
+            <PartitionID>2</PartitionID>
           </InstallTo>
+          <InstallToAvailablePartition>false</InstallToAvailablePartition>
           <WillShowUI>OnError</WillShowUI>
         </OSImage>
       </ImageInstall>
@@ -61,12 +77,8 @@
           <PlainText>true</PlainText>
         </AdministratorPassword>
       </UserAccounts>
-      <OOBE>
-        <HideEULAPage>true</HideEULAPage>
-        <NetworkLocation>Home</NetworkLocation>
-        <ProtectYourPC>3</ProtectYourPC>
-      </OOBE>
-      <ShowWindowsLive>false</ShowWindowsLive>
+      <RegisteredOrganization>---</RegisteredOrganization>
+      <RegisteredOwner>---</RegisteredOwner>
     </component>
   </settings>
   <settings pass="specialize">
