@@ -6,7 +6,7 @@ cows: ''
 pbuild_conf: '/etc/pbuilderrc'
 packager: 'puppet'
 gpg_name: 'info@puppetlabs.com'
-gpg_key: '4BD6EC30'
+gpg_key: '7F438280EF8D349F'
 sign_tar: FALSE
 # a space separated list of mock configs
 final_mocks: 'pupent-el6-x86_64 pupent-el7-x86_64'
