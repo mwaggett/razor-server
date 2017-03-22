@@ -38,6 +38,7 @@ files:
   - doc
   - lib
   - config.yaml.sample
+  - locales
   - hooks
   - shiro.ini
   - jars
