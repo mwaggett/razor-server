@@ -78,6 +78,10 @@ Requires:         %{?systemd_requires}
 
 Requires:         libarchive-devel
 
+# Don't provide anything so the system doesn't use our packages to resolve deps
+Autoprov: 0
+Autoreq: 0
+
 %description
 Razor is an advanced provisioning application which can deploy both bare-metal
 and virtual systems. It's aimed at solving the problem of how to bring new
